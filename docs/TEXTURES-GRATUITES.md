@@ -1,9 +1,10 @@
 # Textures gratuites — War in the World: Future Front
 
 ## État actuel
-- Le terrain de `index.html` utilise désormais une texture de bruit générée par Canvas à l'exécution (256×256, répétée). Elle ne télécharge aucun fichier externe et n'a pas de licence tierce.
-- Cette modification est un premier traitement visuel léger, pas un pack de textures photoréalistes.
-- Les textures externes ci-dessous sont des sources vérifiées, mais elles ne sont **pas encore téléchargées ni intégrées** au dépôt.
+- Le terrain utilise une texture de grain générée localement par Canvas (256×256, répétée sur la surface).
+- Les bâtiments de l'avant-poste utilisent maintenant deux textures procédurales locales : béton marqué et métal peint strié.
+- Ces textures sont générées au lancement, sans téléchargement ni licence tierce. Elles améliorent la variation de surface, mais ne sont pas des scans photoréalistes PBR.
+- Les textures externes ci-dessous restent des sources vérifiées, mais elles ne sont **pas encore téléchargées ni intégrées** au dépôt.
 
 ## Sources avec licence vérifiée
 
@@ -15,9 +16,9 @@
    Les pages de packs affichent la licence par pack; choisir uniquement ceux portant explicitement CC0. Détails : https://kenney.nl/support
 
 ## Matériaux à privilégier
-- Sol principal : terre/herbe ou terrain poussiéreux.
-- Zones de combat : gravier, boue et béton.
-- Avant-poste : béton usé et métal peint/griffé.
+- Sol principal : texture procédurale de terre/herbe.
+- Avant-poste : textures procédurales de béton marqué et de métal strié.
+- Prochaine étape : ajouter des cartes locales 1K de gravier/boue et améliorer les textures des arbres, une fois les fichiers externes téléchargés et leurs licences consignées.
 
 ## Profil mobile — Samsung Galaxy A06
 - Commencer par des textures **1K (1024×1024)**; éviter de charger plusieurs ensembles 4K/8K.
