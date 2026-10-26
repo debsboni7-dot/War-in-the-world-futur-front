@@ -42,7 +42,16 @@ const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xdceeff,0x4b5945,2.0));const sun=new THREE.DirectionalLight(0xffe1b0,2.0);sun.position.set(-18,32,12);scene.add(sun);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,1,1),new THREE.MeshStandardMaterial({color:0x526b48,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
+// Lightweight procedural ground texture: generated locally, no external asset/license dependency.
+function makeNoiseTexture(base,seed=1){
+ const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');
+ ctx.fillStyle=base;ctx.fillRect(0,0,256,256);
+ let n=seed;const rand=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
+ for(let i=0;i<2600;i++){const a=.06+rand()*.2;ctx.fillStyle=rand()>.5?('rgba(210,205,170,'+a+')'):('rgba(8,15,12,'+a+')');const w=1+rand()*4;ctx.fillRect(rand()*256,rand()*256,w,w)}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(24,24);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=1;return t;
+}
+const groundTex=makeNoiseTexture('#526b48',17);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,1,1),new THREE.MeshStandardMaterial({map:groundTex,color:0xffffff,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
 const grid=new THREE.GridHelper(180,45,0x82927a,0x71836b);grid.position.y=-.04;scene.add(grid);
 function box(w,h,d,color,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.85}));m.position.set(x,y,z);scene.add(m);return m}
 function tree(x,z,s=1){const trunk=box(.35*s,2*s,.35*s,0x57432e,x,s,z);const crown=new THREE.Mesh(new THREE.ConeGeometry(1.25*s,3*s,6),new THREE.MeshStandardMaterial({color:0x34583b,roughness:1}));crown.position.set(x,2.6*s,z);scene.add(crown)}
