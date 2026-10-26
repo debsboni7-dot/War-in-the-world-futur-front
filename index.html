@@ -35,6 +35,8 @@ const root=document.querySelector('#game'),message=document.querySelector('#mess
 function showMessage(t){message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>message.style.display='none',2200)}
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){showMessage('3D engine could not load. Check your internet connection and reload.');throw e}
+let GLTFLoader=null;
+try{({GLTFLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js?module'))}catch(e){console.warn('Optional GLB loader unavailable; using lightweight weapon placeholder.',e)}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb5bd);scene.fog=new THREE.Fog(0x9bb5bd,38,115);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
@@ -54,6 +56,22 @@ function part(geo,mat,x,y,z){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,
 part(new THREE.CapsuleGeometry(.42,.8,3,6),suit,0,1.25,0);part(new THREE.SphereGeometry(.34,8,6),armor,0,2.05,0);part(new THREE.BoxGeometry(.45,.12,.08),visor,0,2.08,-.3);
 part(new THREE.BoxGeometry(.22,.7,.24),armor,-.55,1.3,0);part(new THREE.BoxGeometry(.22,.7,.24),armor,.55,1.3,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,-.23,.4,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0);
 const gun= new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));gun.position.set(.58,1.25,-.45);player.add(gun);
+// Optional first real weapon: add assets/models/weapons/rotary.glb to GitHub.
+// Keep the small procedural gun visible unless the GLB loads successfully.
+if(GLTFLoader){
+ const weaponLoader=new GLTFLoader();
+ weaponLoader.load('assets/models/weapons/rotary.glb',gltf=>{
+  const model=gltf.scene;
+  model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.material){o.material.roughness=Math.max(.35,o.material.roughness??.7)}}});
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z);
+  if(!Number.isFinite(maxDim)||maxDim<.0001){console.warn('Rotary GLB has invalid dimensions; keeping placeholder.');return}
+  const scale=.85/maxDim;model.scale.setScalar(scale);
+  model.position.set(.58-center.x*scale,1.25-center.y*scale,-.45-center.z*scale);
+  player.add(model);gun.visible=false;
+  console.info('Rotary GLB loaded. Check scale, orientation and hand alignment on device.');
+ },undefined,error=>console.warn('Rotary GLB not found/loaded; keeping placeholder weapon.',error));
+}
 player.position.set(0,0,3);
 let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
