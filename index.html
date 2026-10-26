@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101820">
+<title>War in the World: Future Front</title>
+<style>
+:root{color-scheme:dark;--panel:rgba(8,17,24,.82);--line:rgba(180,220,230,.25);--accent:#ffb547}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111c23;color:#edf5f7;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}
+.hud{position:fixed;inset:0;pointer-events:none;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:space-between}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.brand,.status,.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(8px);border-radius:12px;padding:10px 12px}.brand strong{display:block;font-size:clamp(12px,3.5vw,17px);letter-spacing:.04em}.brand small{color:#9fb8c0;font-size:11px}.status{font-size:12px;line-height:1.7;text-align:right}.bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}.hint{max-width:52%;font-size:11px;color:#c2d1d5;background:var(--panel);padding:8px 10px;border-radius:10px;border:1px solid var(--line)}
+.controls{pointer-events:auto;display:flex;gap:8px;align-items:flex-end}.btn{border:1px solid var(--line);background:rgba(9,19,26,.88);color:#fff;border-radius:14px;min-width:56px;min-height:54px;padding:8px;font-weight:700;font-size:11px;touch-action:none}.btn:active,.btn.active{border-color:var(--accent);background:rgba(106,70,24,.88)}#stick{pointer-events:auto;width:112px;height:112px;border:1px solid #8da6ad88;border-radius:50%;background:#07121a88;position:relative;touch-action:none;flex-shrink:0}#knob{position:absolute;left:50%;top:50%;width:42px;height:42px;transform:translate(-50%,-50%);border-radius:50%;background:#d6e2e5aa;border:1px solid #fff8}
+#message{position:fixed;left:50%;top:25%;transform:translateX(-50%);background:#08131ddd;border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13px;max-width:85%;text-align:center;display:none}
+@media(min-width:800px){.hud{padding:20px}.btn{min-width:68px;min-height:58px}.hint{font-size:13px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud">
+ <div class="top">
+  <div class="brand"><strong>WAR IN THE WORLD</strong><small>FUTURE FRONT · FIELD TEST</small></div>
+  <div class="status"><div>MISSION <b id="mission">01</b></div><div>ENERGY <b id="energy">100%</b></div><div>FPS <b id="fps">--</b></div></div>
+ </div>
+ <div class="bottom">
+  <div id="stick" aria-label="Movement joystick"><div id="knob"></div></div>
+  <div class="hint">Move with the joystick. Drag the open screen to look around. Tap FIRE to test your weapon.</div>
+  <div class="controls"><button class="btn" id="aim">LOOK</button><button class="btn" id="fire">FIRE</button><button class="btn" id="run">SPRINT</button></div>
+ </div>
+</div>
+<div id="message"></div>
+<script type="module">
+const root=document.querySelector('#game'),message=document.querySelector('#message');
+function showMessage(t){message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>message.style.display='none',2200)}
+let THREE;
+try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){showMessage('3D engine could not load. Check your internet connection and reload.');throw e}
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb5bd);scene.fog=new THREE.Fog(0x9bb5bd,38,115);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
+const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xdceeff,0x4b5945,2.0));const sun=new THREE.DirectionalLight(0xffe1b0,2.0);sun.position.set(-18,32,12);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,1,1),new THREE.MeshStandardMaterial({color:0x526b48,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
+const grid=new THREE.GridHelper(180,45,0x82927a,0x71836b);grid.position.y=-.04;scene.add(grid);
+function box(w,h,d,color,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.85}));m.position.set(x,y,z);scene.add(m);return m}
+function tree(x,z,s=1){const trunk=box(.35*s,2*s,.35*s,0x57432e,x,s,z);const crown=new THREE.Mesh(new THREE.ConeGeometry(1.25*s,3*s,6),new THREE.MeshStandardMaterial({color:0x34583b,roughness:1}));crown.position.set(x,2.6*s,z);scene.add(crown)}
+for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=13+Math.random()*65,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x)<7&&Math.abs(z)<9)continue;tree(x,z,.65+Math.random()*.85)}
+// Simple readable futuristic outpost structures
+for(let i=0;i<9;i++){let x=(i%3-1)*9,z=-16-Math.floor(i/3)*7;box(4,2.5,3,0x68757a,x,1.25,z);box(4.2,.25,3.2,0x263b46,x,2.6,z);box(.15,1.1,.15,0xffa640,x-1.4,1.3,z+1.56);box(.15,1.1,.15,0xffa640,x+1.4,1.3,z+1.56)}
+// Player: lightweight placeholder built from simple geometry; no external model needed.
+const player=new THREE.Group();scene.add(player);
+const suit=new THREE.MeshStandardMaterial({color:0x344b59,roughness:.72}),armor=new THREE.MeshStandardMaterial({color:0x9ba9ad,metalness:.45,roughness:.48}),visor=new THREE.MeshStandardMaterial({color:0x32c9d0,metalness:.35,roughness:.25,emissive:0x07545a});
+function part(geo,mat,x,y,z){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);player.add(m);return m}
+part(new THREE.CapsuleGeometry(.42,.8,3,6),suit,0,1.25,0);part(new THREE.SphereGeometry(.34,8,6),armor,0,2.05,0);part(new THREE.BoxGeometry(.45,.12,.08),visor,0,2.08,-.3);
+part(new THREE.BoxGeometry(.22,.7,.24),armor,-.55,1.3,0);part(new THREE.BoxGeometry(.22,.7,.24),armor,.55,1.3,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,-.23,.4,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0);
+const gun= new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));gun.position.set(.58,1.25,-.45);player.add(gun);
+player.position.set(0,0,3);
+let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
+const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
+function setStick(e){stickRect=stick.getBoundingClientRect();const dx=e.clientX-(stickRect.left+stickRect.width/2),dy=e.clientY-(stickRect.top+stickRect.height/2),max=35,len=Math.hypot(dx,dy)||1;moveX=dx/Math.max(max,len);moveY=dy/Math.max(max,len);knob.style.left=(50+moveX*32)+'%';knob.style.top=(50+moveY*32)+'%'}
+stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setStick(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setStick(e)});function endStick(){stickId=null;moveX=moveY=0;knob.style.left='50%';knob.style.top='50%'}stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
+let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);
+document.querySelector('#run').addEventListener('pointerdown',()=>sprinting=true);for(const ev of ['pointerup','pointercancel','pointerleave'])document.querySelector('#run').addEventListener(ev,()=>sprinting=false);
+document.querySelector('#aim').addEventListener('click',()=>{pitch=pitch===-.13?-.02:-.13;showMessage('Camera view adjusted')});
+document.querySelector('#fire').addEventListener('click',()=>{shots++;document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');showMessage('Weapon test fired · '+shots+' shot'+(shots===1?'':'s'))});
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+const clock=new THREE.Clock();
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
+let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
+const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,-iy*speed);player.position.addScaledVector(right,ix*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-95,95);player.position.z=THREE.MathUtils.clamp(player.position.z,-95,95);player.rotation.y=yaw;
+const target=new THREE.Vector3(player.position.x,1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*7,3.4,Math.cos(yaw)*7);camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
+energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';renderer.render(scene,camera)}
+showMessage('Field test ready. Move to explore the outpost.');requestAnimationFrame(animate);
+</script>
+</body></html>
