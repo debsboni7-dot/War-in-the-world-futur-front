@@ -3,7 +3,7 @@
 ## État actuel
 - Le terrain utilise une texture de grain générée localement par Canvas (256×256, répétée sur la surface).
 - Les bâtiments de l'avant-poste utilisent deux textures procédurales locales : béton marqué et métal peint strié.
-- Les troncs et les feuillages des arbres utilisent aussi des variations procédurales locales pour éviter des surfaces totalement unies.
+- Les troncs ont maintenant un grain vertical dédié; les feuillages utilisent des marques ovales façon feuilles, générées localement. La grille de débogage visible au sol a été retirée pour garder un terrain continu.
 - Ces textures sont générées au lancement, sans téléchargement ni licence tierce. Elles améliorent la variation de surface, mais ne sont pas des scans photoréalistes PBR.
 - Les textures externes ci-dessous restent des sources vérifiées, mais elles ne sont **pas encore téléchargées ni intégrées** au dépôt.
 
