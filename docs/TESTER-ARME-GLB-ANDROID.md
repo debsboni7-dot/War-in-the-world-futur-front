@@ -1,20 +1,23 @@
-# Tester une arme GLB depuis Android
+# Tester une arme FBX directement depuis Android
 
-Le jeu peut maintenant charger facultativement `assets/models/weapons/rotary.glb`. Si le fichier n'existe pas, ou si le chargement échoue, le jeu conserve son arme provisoire légère : le démarrage ne dépend donc pas de ce modèle.
+Le jeu utilise maintenant le chargeur Three.js `FBXLoader` et tente de charger le FBX déjà présent dans le dépôt : `assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx` (environ 1,59 Mio).
 
-## Étapes sur téléphone
+## Ce qui se passe en jeu
 
-1. Ouvre le dépôt GitHub : https://github.com/debsboni7-dot/War-in-the-world-futur-front
-2. Dans `assets/models/weapons/`, télécharge le FBX `Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx` (environ 1,59 Mio).
-3. Ouvre le convertisseur dans Chrome : https://poyo.ai/free-tools/fbx-to-glb
-4. Choisis le FBX téléchargé, vérifie que le modèle apparaît correctement, puis exporte en GLB.
-5. Dans GitHub sur Android, ouvre `assets/models/weapons/` et utilise l'option d'ajout de fichier pour téléverser le GLB converti. Nomme-le exactement `rotary.glb`.
-6. Attends que GitHub Pages publie le commit, puis recharge le jeu. Teste le modèle et les FPS.
+- Le chargeur demande uniquement cette arme légère au démarrage.
+- Les 16 autres FBX ne sont pas chargés.
+- L'arme provisoire reste visible si le module FBXLoader ou le fichier FBX échoue à charger.
+- En cas de chargement réussi, le code normalise la taille approximative du modèle et remplace l'arme provisoire.
 
-## Vérifications importantes
+## Test à effectuer sur Android
 
-- Le convertisseur annonce un traitement dans le navigateur, sans téléversement du FBX.
-- La conversion ne garantit pas que l'orientation, l'échelle, les matériaux ou les textures seront parfaits. Vérifie l'aperçu avant d'exporter.
-- Sur le téléphone, un modèle qui charge mais paraît trop grand, orienté de travers ou sans texture doit être corrigé avant de l'utiliser en jeu.
-- Le chargeur du jeu masque l'arme provisoire uniquement après un chargement GLB réussi. En cas d'échec, le prototype conserve l'arme provisoire.
-- Le GLB n'est pas encore inclus dans le dépôt. Il faut effectuer les étapes ci-dessus pour tester le vrai modèle.
+1. Ouvre le jeu via GitHub Pages après la publication du dernier commit.
+2. Recharge la page avec une connexion internet active (Three.js et FBXLoader viennent d'un CDN).
+3. Regarde si le modèle apparaît dans la main du personnage et vérifie les FPS.
+4. Si l'arme est invisible, trop grande, tournée dans le mauvais sens ou sans textures, le FBX peut nécessiter un ajustement supplémentaire. La normalisation actuelle ne peut pas deviner automatiquement l'orientation correcte.
+
+## Limites connues
+
+- Le FBX fait environ 1,59 Mio, mais il peut contenir des matériaux ou des données supplémentaires qui affectent le temps de chargement.
+- Les textures externes éventuelles doivent être accessibles par des chemins compatibles ; la présence de fichiers de textures séparés n'a pas été confirmée.
+- Le changement de code n'a pas encore été testé dans un navigateur réel. Ne considère pas l'arme comme validée avant un test sur l'appareil.
