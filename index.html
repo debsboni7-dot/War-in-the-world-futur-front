@@ -57,7 +57,7 @@ const concreteTex=makeNoiseTexture('#68757a',23,1,'concrete');
 const metalTex=makeNoiseTexture('#263b46',31,1,'metal');
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,1,1),new THREE.MeshStandardMaterial({map:groundTex,color:0xffffff,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
 const grid=new THREE.GridHelper(180,45,0x82927a,0x71836b);grid.position.y=-.04;scene.add(grid);
-function box(w,h,d,color,x,y,z,texture=null){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color, map:texture, roughness:texture===metalTex?.68:.9, metalness:texture===metalTex?.35:0}));m.position.set(x,y,z);scene.add(m);return m}
+function box(w,h,d,color,x,y,z,texture=null){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color, map:texture, roughness:texture===metalTex ? .68 : .9, metalness:texture===metalTex ? .35 : 0}));m.position.set(x,y,z);scene.add(m);return m}
 function tree(x,z,s=1){const trunk=box(.35*s,2*s,.35*s,0x57432e,x,s,z);const crown=new THREE.Mesh(new THREE.ConeGeometry(1.25*s,3*s,6),new THREE.MeshStandardMaterial({color:0x34583b,roughness:1}));crown.position.set(x,2.6*s,z);scene.add(crown)}
 for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=13+Math.random()*65,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x)<7&&Math.abs(z)<9)continue;tree(x,z,.65+Math.random()*.85)}
 // Simple readable futuristic outpost structures
