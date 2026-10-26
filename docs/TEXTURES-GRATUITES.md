@@ -2,7 +2,8 @@
 
 ## État actuel
 - Le terrain utilise une texture de grain générée localement par Canvas (256×256, répétée sur la surface).
-- Les bâtiments de l'avant-poste utilisent maintenant deux textures procédurales locales : béton marqué et métal peint strié.
+- Les bâtiments de l'avant-poste utilisent deux textures procédurales locales : béton marqué et métal peint strié.
+- Les troncs et les feuillages des arbres utilisent aussi des variations procédurales locales pour éviter des surfaces totalement unies.
 - Ces textures sont générées au lancement, sans téléchargement ni licence tierce. Elles améliorent la variation de surface, mais ne sont pas des scans photoréalistes PBR.
 - Les textures externes ci-dessous restent des sources vérifiées, mais elles ne sont **pas encore téléchargées ni intégrées** au dépôt.
 
@@ -18,7 +19,8 @@
 ## Matériaux à privilégier
 - Sol principal : texture procédurale de terre/herbe.
 - Avant-poste : textures procédurales de béton marqué et de métal strié.
-- Prochaine étape : ajouter des cartes locales 1K de gravier/boue et améliorer les textures des arbres, une fois les fichiers externes téléchargés et leurs licences consignées.
+- Végétation : textures procédurales d'écorce et de feuillage.
+- Prochaine étape : remplacer progressivement ces matériaux générés par des cartes locales 1K de gravier/boue et de béton/metal scannés, une fois les fichiers externes réellement téléchargés et leurs licences consignées.
 
 ## Profil mobile — Samsung Galaxy A06
 - Commencer par des textures **1K (1024×1024)**; éviter de charger plusieurs ensembles 4K/8K.
