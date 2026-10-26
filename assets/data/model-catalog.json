@@ -1,14 +1,16 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
   "version": 1,
-  "status": "inventory-only",
-  "note": "Categories are provisional and inferred from filenames. FBX geometry, UVs, materials, textures, triangle counts, scale and rigging have not been visually or technically validated. Do not load these FBX files into the mobile scene until each has been converted and tested as optimized GLB.",
+  "status": "inventory-and-size-audit",
+  "note": "Categories are provisional and inferred from filenames. File sizes are from the GitHub tree. The FBX binary contents have not been parsed or visually inspected, so geometry, UVs, materials, embedded/external textures, triangle counts, scale and rigging remain unverified. Do not load these FBX files into the mobile scene until each has been converted and tested as optimized GLB.",
   "mobilePolicy": {
     "runtimeFormat": "glb",
     "loadOnDemand": true,
     "loadAllAtStartup": false,
     "recommendedTextureMaxDimension": 1024,
-    "recommendedDrawCalls": "minimize",
+    "priority": "validate one small weapon first, then one vehicle",
+    "textureFilesFound": false,
+    "textureFilesNote": "The repository tree currently contains no separate image texture files; FBX-embedded textures have not been checked.",
     "fallback": "keep lightweight procedural placeholder"
   },
   "models": [
@@ -18,7 +20,16 @@
       "label": "pulse weapon",
       "source": "assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_pulse_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2034620,
+      "sizeMiB": 1.94,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate",
@@ -26,7 +37,16 @@
       "label": "rotary weapon",
       "source": "assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 1663212,
+      "sizeMiB": 1.59,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_combat_shotgun_with_20261025_generate",
@@ -34,7 +54,16 @@
       "label": "combat shotgun",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_combat_shotgun_with_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2808396,
+      "sizeMiB": 2.68,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_energy_pistol_for_a_20261025_generate",
@@ -42,7 +71,16 @@
       "label": "energy pistol",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_energy_pistol_for_a_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 3666812,
+      "sizeMiB": 3.5,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_heavy_machine_gun_20261025_generate",
@@ -50,7 +88,16 @@
       "label": "heavy machine gun",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_heavy_machine_gun_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2817212,
+      "sizeMiB": 2.69,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_laser_rifle_with_20261025_generate",
@@ -58,7 +105,16 @@
       "label": "laser rifle",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_laser_rifle_with_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2508892,
+      "sizeMiB": 2.39,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_military_assault_20261025_generate",
@@ -66,7 +122,16 @@
       "label": "assault rifle",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_military_assault_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2485308,
+      "sizeMiB": 2.37,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_military_sniper_20261025_generate",
@@ -74,7 +139,16 @@
       "label": "sniper rifle",
       "source": "assets/models/weapons/Meshy_AI_Realistic_futuristic_military_sniper_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 1668780,
+      "sizeMiB": 1.59,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_compact_futuristic_military_20261025_generate",
@@ -82,7 +156,16 @@
       "label": "compact military vehicle",
       "source": "assets/models/vehicles/Meshy_AI_Create_a_compact_futuristic_military_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 7478588,
+      "sizeMiB": 7.13,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_amphibious_20261025_generate",
@@ -90,7 +173,16 @@
       "label": "amphibious vehicle",
       "source": "assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_amphibious_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 19041388,
+      "sizeMiB": 18.16,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_heavy_20261025_generate",
@@ -98,7 +190,16 @@
       "label": "heavy vehicle",
       "source": "assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_heavy_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 4397516,
+      "sizeMiB": 4.19,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_self_20261025_generate",
@@ -106,7 +207,16 @@
       "label": "self-propelled vehicle (provisional)",
       "source": "assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_self_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 13620492,
+      "sizeMiB": 12.99,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate",
@@ -114,7 +224,16 @@
       "label": "stealth vehicle",
       "source": "assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2618716,
+      "sizeMiB": 2.5,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Realistic_futuristic_compact_military_20261025_generate",
@@ -122,7 +241,16 @@
       "label": "compact military vehicle",
       "source": "assets/models/vehicles/Meshy_AI_Realistic_futuristic_compact_military_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 3421644,
+      "sizeMiB": 3.26,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_20261025_generate",
@@ -130,7 +258,16 @@
       "label": "unclassified",
       "source": "assets/models/unclassified/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2723356,
+      "sizeMiB": 2.6,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate",
@@ -138,7 +275,16 @@
       "label": "unclassified",
       "source": "assets/models/unclassified/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 10067228,
+      "sizeMiB": 9.6,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     },
     {
       "id": "Meshy_AI_Create_a_realistic_futuristic_thermal_20261025_generate",
@@ -146,7 +292,16 @@
       "label": "unclassified",
       "source": "assets/models/unclassified/Meshy_AI_Create_a_realistic_futuristic_thermal_20261025_generate.fbx",
       "format": "fbx",
-      "runtimeReady": false
+      "runtimeReady": false,
+      "sizeBytes": 2486300,
+      "sizeMiB": 2.37,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": false
+      }
     }
   ]
 }
