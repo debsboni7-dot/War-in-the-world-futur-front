@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#101820"><title>WITW — Atelier modèles 3D</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101820;color:#edf4f6;font:14px system-ui,sans-serif}header{padding:14px;background:#172630;border-bottom:1px solid #39505c}h1{font-size:18px;margin:0 0 5px}p{margin:4px 0;color:#b7c7cc;font-size:12px}main{padding:12px;max-width:900px;margin:auto}select,button{width:100%;padding:12px;border-radius:10px;border:1px solid #526975;background:#1b2c36;color:white;font-size:14px;margin:5px 0}button{background:#9d6924;border-color:#d9a24c;font-weight:700}#view{height:48vh;min-height:280px;border:1px solid #3b515b;border-radius:12px;overflow:hidden;background:#202e34;margin-top:8px}#view canvas{display:block;width:100%;height:100%}#report{white-space:pre-wrap;overflow-wrap:anywhere;background:#0a1319;border:1px solid #344954;border-radius:10px;padding:12px;font-size:12px;line-height:1.55;margin-top:10px}.row{display:flex;gap:8px}.row button{flex:1}small{color:#9bb0b8}
+</style></head><body><header><h1>ATELIER 3D — FUTURE FRONT</h1><p>Inspection sur téléphone · chargement d'un seul modèle à la fois · texture de secours procédurale si le fichier n'en contient pas.</p></header><main>
+<label for="model">Modèle à inspecter</label><select id="model"></select><div class="row"><button id="load">CHARGER / ANALYSER</button><button id="reset">RÉINITIALISER VUE</button></div><div id="view"></div><div id="report">Choisis un modèle puis appuie sur CHARGER / ANALYSER. Le rapport indique les matériaux et si une image de texture est détectée.</div><p><small>Note : une texture de secours affichée ici n'est pas enregistrée dans le FBX/GLB original. Elle sert à tester le rendu et repérer les modèles qui nécessitent une vraie texturation PBR.</small></p>
+</main><script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+const models=[
+['Arme · pulse','assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_pulse_20261025_generate.fbx','fbx'],
+['Arme · rotary','assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx','fbx'],
+['Arme · shotgun','assets/models/weapons/Meshy_AI_Realistic_futuristic_combat_shotgun_with_20261025_generate.fbx','fbx'],
+['Arme · pistolet énergie','assets/models/weapons/Meshy_AI_Realistic_futuristic_energy_pistol_for_a_20261025_generate.fbx','fbx'],
+['Arme · mitrailleuse lourde','assets/models/weapons/Meshy_AI_Realistic_futuristic_heavy_machine_gun_20261025_generate.fbx','fbx'],
+['Arme · fusil laser','assets/models/weapons/Meshy_AI_Realistic_futuristic_laser_rifle_with_20261025_generate.fbx','fbx'],
+['Arme · fusil assaut','assets/models/weapons/Meshy_AI_Realistic_futuristic_military_assault_20261025_generate.fbx','fbx'],
+['Arme · sniper','assets/models/weapons/Meshy_AI_Realistic_futuristic_military_sniper_20261025_generate.fbx','fbx'],
+['Arme · GLB texturé 1','assets/models/weapons/Meshy_AI_Realistic_futuristic__1027063641_texture.glb','glb'],
+['Arme · GLB texturé 2','assets/models/weapons/Meshy_AI_Realistic_futuristic__1027064817_texture.glb','glb'],
+['Arme · GLB génération','assets/models/weapons/Meshy_AI_Realistic_futuristic__1027070357_generate.glb','glb'],
+['Arme · animations 1','assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations.glb','glb'],
+['Arme · animations 2','assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations (1).glb','glb'],
+['Véhicule · compact','assets/models/vehicles/Meshy_AI_Create_a_compact_futuristic_military_20261025_generate.fbx','fbx'],
+['Véhicule · amphibie','assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_amphibious_20261025_generate.fbx','fbx'],
+['Véhicule · lourd','assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_heavy_20261025_generate.fbx','fbx'],
+['Véhicule · autopropulsé','assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_self_20261025_generate.fbx','fbx'],
+['Véhicule · furtif','assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx','fbx'],
+['Véhicule · compact alternatif','assets/models/vehicles/Meshy_AI_Realistic_futuristic_compact_military_20261025_generate.fbx','fbx'],
+['Robot (à confirmer)','assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx','fbx'],
+['Structure (à confirmer)','assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx','fbx'],
+['Arme (à confirmer)','assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_thermal_20261025_generate.fbx','fbx']];
+const select=document.querySelector('#model');models.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m[0];select.append(o)});
+const host=document.querySelector('#view'),report=document.querySelector('#report');const scene=new THREE.Scene();scene.background=new THREE.Color(0x202e34);scene.add(new THREE.HemisphereLight(0xe4f3ff,0x38432f,2.1));const sun=new THREE.DirectionalLight(0xffe0b2,2.4);sun.position.set(4,8,6);scene.add(sun);
+const camera=new THREE.PerspectiveCamera(45,1,.01,10000);camera.position.set(3,2,4);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.outputColorSpace=THREE.SRGBColorSpace;host.append(renderer.domElement);
+let current=null,raf=0,drag=false,px=0,py=0,theta=.65,phi=1.15,radius=4;
+function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+function fallbackTexture(kind){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const base=kind==='vehicle'?'#46564a':kind==='structure'?'#657176':'#293b46';x.fillStyle=base;x.fillRect(0,0,128,128);let s=17;const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296};for(let i=0;i<700;i++){const a=.04+rnd()*.22;x.fillStyle=rnd()>.5?'rgba(220,220,200,'+a+')':'rgba(0,0,0,'+a+')';if(kind==='weapon'||kind==='vehicle'){x.fillRect(rnd()*128,rnd()*128,2+rnd()*14,1+rnd()*4)}else{x.fillRect(rnd()*128,rnd()*128,1+rnd()*5,1+rnd()*5)}}if(kind==='vehicle'){x.fillStyle='rgba(28,40,31,.8)';for(let y=0;y<128;y+=32)x.fillRect(0,y,128,9)}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=1;return t}
+function kindFor(path){return path.includes('vehicles/')?'vehicle':path.includes('structures/')?'structure':'weapon'}
+function frame(obj){const b=new THREE.Box3().setFromObject(obj),size=b.getSize(new THREE.Vector3()),center=b.getCenter(new THREE.Vector3()),max=Math.max(size.x,size.y,size.z);if(!isFinite(max)||max<1e-6)throw Error('Dimensions invalides');obj.position.sub(center);radius=Math.max(max*1.65,.5);camera.near=Math.max(radius/1000,.001);camera.far=radius*100;camera.updateProjectionMatrix();theta=.65;phi=1.15}
+async function load(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))if(m){if(m.map&&m.map.userData?.fallback) m.map.dispose();m.dispose()}}});current=null}report.textContent='Chargement…';const m=models[+select.value];try{const obj=m[2]==='fbx'?await new FBXLoader().loadAsync(m[1]):(await new GLTFLoader().loadAsync(m[1])).scene;let meshCount=0,matCount=0,withMap=0,withoutMap=0,uvCount=0;const tex=fallbackTexture(kindFor(m[1]));tex.userData.fallback=true;
+obj.traverse(o=>{if(!o.isMesh)return;meshCount++;o.frustumCulled=true;if(o.geometry?.attributes?.uv)uvCount++;const mats=Array.isArray(o.material)?o.material:[o.material];o.material=mats.map(mat=>{matCount++;if(mat?.map)withMap++;else{withoutMap++;if(mat){mat.map=tex;mat.color?.set(0xffffff);mat.roughness=Math.max(mat.roughness??.65,.55);mat.metalness=Math.min(mat.metalness??.15,.65);mat.needsUpdate=true}}return mat||new THREE.MeshStandardMaterial({map:tex,roughness:.7,metalness:.25})});if(!o.material.length)o.material=new THREE.MeshStandardMaterial({map:tex})});
+current=obj;scene.add(obj);frame(obj);report.textContent='Modèle : '+m[0]+'\nFormat : '+m[2].toUpperCase()+'\nMailles : '+meshCount+'\nMatériaux : '+matCount+'\nMatériaux avec image détectée : '+withMap+'\nMatériaux sans image (texture de secours ajoutée à l’affichage) : '+withoutMap+'\nMailles avec UV : '+uvCount+'\n\nAttention : texture de secours = aperçu seulement, pas sauvegardée dans le fichier source. Les modèles sans UV ou avec UV incorrects nécessitent une correction avant texturation PBR finale.'; }catch(e){report.textContent='ÉCHEC DE CHARGEMENT\n'+m[0]+'\n'+String(e)+'\nVérifie que le fichier est présent dans le dépôt et que GitHub Pages est à jour.'}}
+document.querySelector('#load').addEventListener('click',load);document.querySelector('#reset').addEventListener('click',()=>{theta=.65;phi=1.15});
+host.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;host.setPointerCapture(e.pointerId)});host.addEventListener('pointermove',e=>{if(!drag)return;theta-=(e.clientX-px)*.008;phi=THREE.MathUtils.clamp(phi+(e.clientY-py)*.008,.15,Math.PI-.15);px=e.clientX;py=e.clientY});for(const ev of ['pointerup','pointercancel'])host.addEventListener(ev,()=>drag=false);
+function animate(){raf=requestAnimationFrame(animate);camera.position.set(radius*Math.sin(phi)*Math.sin(theta),radius*Math.cos(phi),radius*Math.sin(phi)*Math.cos(theta));camera.lookAt(0,0,0);renderer.render(scene,camera)}animate();
+</script></body></html>
