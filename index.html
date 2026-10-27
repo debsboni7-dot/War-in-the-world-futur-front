@@ -164,7 +164,7 @@ function loadFallbackWeapon(){
  new FBXLoader().load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',prepareWeaponModel,undefined,()=>{gun.visible=true});
 }
 if(GLTFLoader){
- new GLTFLoader().load('assets/models/textured/fusil-pompe-tactique-pbr.glb',gltf=>prepareWeaponModel(gltf.scene),undefined,()=>loadFallbackWeapon());
+ new GLTFLoader().load('assets/models/textured/fusil-pompe-tactique-pbr-v2.glb',gltf=>prepareWeaponModel(gltf.scene),undefined,()=>loadFallbackWeapon());
 }else loadFallbackWeapon();
 player.position.set(0,0,3);
 
@@ -229,13 +229,13 @@ function loadWorldGLB(url, position, targetSize, label){
  });
 }
 setTimeout(async()=>{
- const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr.glb',{x:0,y:0,z:-28},7,'PBR outpost structure');
+ const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr-v2.glb',{x:0,y:0,z:-28},7,'PBR outpost structure');
  if(!structure)await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',{x:0,y:0,z:-28},7,'outpost structure fallback',2.8);
  await new Promise(r=>setTimeout(r,900));
- const vehicle=await loadWorldGLB('assets/models/textured/vehicule-blinde-compact-pbr.glb',{x:8,y:0,z:-8},5,'PBR compact armored vehicle');
+ const vehicle=await loadWorldGLB('assets/models/textured/vehicule-blinde-compact-pbr-v2.glb',{x:8,y:0,z:-8},5,'PBR compact armored vehicle');
  if(!vehicle)await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx',{x:8,y:0,z:-8},5,'stealth vehicle fallback',2.7);
  await new Promise(r=>setTimeout(r,900));
- const robot=await loadWorldGLB('assets/models/textured/robot-combat-pbr.glb',{x:-7,y:0,z:-7},2.1,'PBR combat robot');
+ const robot=await loadWorldGLB('assets/models/textured/robot-combat-pbr-v2.glb',{x:-7,y:0,z:-7},2.1,'PBR combat robot');
  if(!robot)await loadWorldFBX('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',{x:-7,y:0,z:-7},2.1,'combat robot fallback',10.1);
 },2600);
 
