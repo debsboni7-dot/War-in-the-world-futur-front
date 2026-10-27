@@ -1,0 +1,13 @@
+{
+  "name": "robot-combat-pbr-v2",
+  "source_model_path": "assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx",
+  "source_model_url": "https://raw.githubusercontent.com/debsboni7-dot/War-in-the-world-futur-front/main/assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx",
+  "texture_prompt": "Photorealistic futuristic military combat robot/exosuit. Layered matte graphite and dark olive armor, brushed steel joints, realistic rubber seals, small restrained amber status lights, subtle scratches and edge wear, functional industrial finish, detailed metal roughness and normal response. Preserve original geometry, silhouette and UV layout. PBR maps, no cartoon, no extra weapons or text.",
+  "provider": "Meshy API Retexture",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "texture_task_id": "01a17dcf-f31a-7462-9f05-71535e14da55",
+  "consumed_credits": 10,
+  "generated_at": "2026-10-27T14:43:39.228Z"
+}
