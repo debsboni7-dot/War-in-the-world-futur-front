@@ -1,0 +1,12 @@
+{
+  "name": "railgun-electromagnetique",
+  "prompt": "Realistic futuristic electromagnetic railgun for a modern military sci-fi video game, distinct long reinforced barrel with electromagnetic accelerator rails, compact armored receiver, visible power cell, heat vents, tactical grip, detailed metal seams and bolts, matte graphite and dark olive materials, subtle wear, believable engineering, isolated single weapon, no hands, no character, no text, game-ready 3D asset.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a17d7d-999e-75bb-9408-9c110158119e",
+  "texture_task_id": "01a17d7e-5641-755d-b91f-3135cf674b86",
+  "generated_at": "2026-10-27T13:14:00.332Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
