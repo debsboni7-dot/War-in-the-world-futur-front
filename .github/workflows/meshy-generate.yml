@@ -1,6 +1,8 @@
 name: Generate 3D model with Meshy
 
 on:
+  issues:
+    types: [opened]
   workflow_dispatch:
     inputs:
       asset_name:
@@ -21,6 +23,10 @@ concurrency:
 
 jobs:
   generate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.issue.title, '[GENERATE3D] ') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -30,8 +36,9 @@ jobs:
       - name: Generate, texture and download GLB
         env:
           MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
-          ASSET_NAME: ${{ inputs.asset_name }}
-          MODEL_PROMPT: ${{ inputs.prompt }}
+          ASSET_NAME: ${{ github.event_name == 'issues' && startsWith(github.event.issue.title, '[GENERATE3D] ') && github.event.issue.title || inputs.asset_name }}
+          MODEL_PROMPT: ${{ github.event_name == 'issues' && github.event.issue.body || inputs.prompt }}
+          ISSUE_EVENT: ${{ github.event_name == 'issues' }}
         run: |
           node <<'NODE'
           const fs = require('fs');
@@ -70,11 +77,16 @@ jobs:
 
           async function main() {
             if (!process.env.MESHY_API_KEY) throw new Error('Secret MESHY_API_KEY absent dans GitHub Actions.');
-            const name = (process.env.ASSET_NAME || '').trim().toLowerCase()
-              .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
+            const rawName = (process.env.ASSET_NAME || '').trim();
+            const name = (process.env.ISSUE_EVENT === 'true' ? rawName.replace(/^\\[GENERATE3D\\]\\s*/i, '') : rawName)
+              .trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
             const prompt = (process.env.MODEL_PROMPT || '').trim();
             if (!name) throw new Error('Nom de fichier invalide.');
+            if (process.env.ISSUE_EVENT === 'true' && !/^[a-z0-9][a-z0-9_-]{0,69}$/.test(name)) throw new Error('Nom de fichier invalide dans le titre de l’issue.');
             if (!prompt || prompt.length > 800) throw new Error('La description doit contenir entre 1 et 800 caractères.');
+
+            const output = path.join('assets', 'models', 'generated', `${name}.glb`);
+            if (fs.existsSync(output)) throw new Error(`Le modèle ${name}.glb existe déjà : aucun écrasement automatique autorisé.`);
 
             console.log('Étape 1/2 : création du maillage Meshy (cela consomme des crédits).');
             const preview = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
@@ -113,7 +125,6 @@ jobs:
             const bytes = Buffer.from(await response.arrayBuffer());
             if (bytes.length < 1000) throw new Error('Le fichier GLB téléchargé est anormalement petit.');
 
-            const output = path.join('assets', 'models', 'generated', `${name}.glb`);
             fs.mkdirSync(path.dirname(output), { recursive: true });
             fs.writeFileSync(output, bytes);
             fs.writeFileSync(path.join(path.dirname(output), `${name}.metadata.json`), JSON.stringify({
