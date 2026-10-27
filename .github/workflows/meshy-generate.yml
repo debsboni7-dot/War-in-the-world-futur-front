@@ -1,0 +1,150 @@
+name: Generate 3D model with Meshy
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_name:
+        description: "Nom du fichier sans extension (ex. railgun-electromagnetique)"
+        required: true
+        type: string
+      prompt:
+        description: "Description du modèle 3D (anglais recommandé, maximum 800 caractères)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meshy-model-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate, texture and download GLB
+        env:
+          MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+          ASSET_NAME: ${{ inputs.asset_name }}
+          MODEL_PROMPT: ${{ inputs.prompt }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          async function api(url, options = {}) {
+            const response = await fetch(url, {
+              ...options,
+              headers: {
+                Authorization: `Bearer ${process.env.MESHY_API_KEY}`,
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+              }
+            });
+            const body = await response.text();
+            if (!response.ok) throw new Error(`Meshy API ${response.status}: ${body.slice(0, 1200)}`);
+            return body ? JSON.parse(body) : {};
+          }
+
+          async function waitForTask(id) {
+            const deadline = Date.now() + 40 * 60 * 1000;
+            while (Date.now() < deadline) {
+              const task = await api(`https://api.meshy.ai/openapi/v2/text-to-3d/${id}`, {
+                method: 'GET',
+                headers: {}
+              });
+              console.log(`Task ${id}: ${task.status}, progression ${task.progress ?? 0}%`);
+              if (task.status === 'SUCCEEDED') return task;
+              if (['FAILED', 'CANCELED'].includes(task.status)) {
+                throw new Error(`Meshy task ${task.status}: ${task.task_error?.message || 'No details'}`);
+              }
+              await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+            throw new Error('Délai dépassé en attendant Meshy. Consulte le statut de la tâche sur Meshy.');
+          }
+
+          async function main() {
+            if (!process.env.MESHY_API_KEY) throw new Error('Secret MESHY_API_KEY absent dans GitHub Actions.');
+            const name = (process.env.ASSET_NAME || '').trim().toLowerCase()
+              .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
+            const prompt = (process.env.MODEL_PROMPT || '').trim();
+            if (!name) throw new Error('Nom de fichier invalide.');
+            if (!prompt || prompt.length > 800) throw new Error('La description doit contenir entre 1 et 800 caractères.');
+
+            console.log('Étape 1/2 : création du maillage Meshy (cela consomme des crédits).');
+            const preview = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
+              method: 'POST',
+              body: JSON.stringify({
+                mode: 'preview',
+                prompt,
+                ai_model: 'meshy-6-lite',
+                target_formats: ['glb'],
+                should_remesh: true,
+                target_polycount: 20000
+              })
+            });
+            if (!preview.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche preview.');
+            const previewTask = await waitForTask(preview.result);
+
+            console.log('Étape 2/2 : texturation PBR (cela consomme aussi des crédits).');
+            const refine = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
+              method: 'POST',
+              body: JSON.stringify({
+                mode: 'refine',
+                preview_task_id: previewTask.id || preview.result,
+                ai_model: 'meshy-6-lite',
+                enable_pbr: true,
+                auto_size: true,
+                target_formats: ['glb']
+              })
+            });
+            if (!refine.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche de texturation.');
+            const finalTask = await waitForTask(refine.result);
+            const url = finalTask.model_urls?.glb;
+            if (!url) throw new Error('La tâche a réussi mais Meshy n’a pas fourni d’URL GLB.');
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Téléchargement GLB échoué : HTTP ${response.status}`);
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (bytes.length < 1000) throw new Error('Le fichier GLB téléchargé est anormalement petit.');
+
+            const output = path.join('assets', 'models', 'generated', `${name}.glb`);
+            fs.mkdirSync(path.dirname(output), { recursive: true });
+            fs.writeFileSync(output, bytes);
+            fs.writeFileSync(path.join(path.dirname(output), `${name}.metadata.json`), JSON.stringify({
+              name,
+              prompt,
+              provider: 'Meshy API',
+              model: 'meshy-6-lite',
+              format: 'glb',
+              texture: 'PBR',
+              mesh_task_id: previewTask.id || preview.result,
+              texture_task_id: finalTask.id || refine.result,
+              generated_at: new Date().toISOString(),
+              note: 'GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation.'
+            }, null, 2) + '\n');
+            console.log(`GLB prêt : ${output} (${bytes.length} octets)`);
+          }
+
+          main().catch(error => {
+            console.error(error.message || error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Commit generated asset to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/models/generated/
+          if git diff --cached --quiet; then
+            echo "Aucun nouveau fichier à enregistrer."
+            exit 1
+          fi
+          git commit -m "Add Meshy-generated 3D asset"
+          git push
