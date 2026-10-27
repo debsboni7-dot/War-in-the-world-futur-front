@@ -1,0 +1,13 @@
+{
+  "name": "structure-outpost-pbr-v2",
+  "source_model_path": "assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx",
+  "source_model_url": "https://raw.githubusercontent.com/debsboni7-dot/War-in-the-world-futur-front/main/assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx",
+  "texture_prompt": "Photorealistic modular futuristic military outpost structure. Weathered grey reinforced concrete, dark steel support panels, olive-drab painted metal, realistic seams, bolts, dust, subtle water stains and edge wear. PBR base color, metallic, roughness and normal maps with believable scale. Preserve the original model geometry, silhouette and UV layout. No cartoon, no extra objects, no readable text.",
+  "provider": "Meshy API Retexture",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "texture_task_id": "01a17dcf-e4d6-7426-946f-cff3225c42c2",
+  "consumed_credits": 10,
+  "generated_at": "2026-10-27T14:43:23.932Z"
+}
