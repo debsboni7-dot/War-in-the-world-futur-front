@@ -22,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: meshy-texture-jobs
+  group: meshy-texture-${{ github.event.issue.number || inputs.asset_name }}
   cancel-in-progress: false
 
 jobs:
@@ -123,4 +123,12 @@ jobs:
           git add assets/models/textured/
           git diff --cached --quiet && { echo "No textured output was saved"; exit 1; }
           git commit -m "Add Meshy PBR textured asset"
-          git push
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            echo "Push conflict; rebasing on latest main (attempt $attempt)"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort || true; sleep 2; }
+            sleep 2
+          done
+          echo "Push failed after retries"
+          exit 1
