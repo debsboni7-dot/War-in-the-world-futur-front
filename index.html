@@ -32,6 +32,7 @@
 <div id="message"></div>
 <script type="module">
 const root=document.querySelector('#game'),message=document.querySelector('#message');
+const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4) || innerWidth < 500;
 function showMessage(t){message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>message.style.display='none',2200)}
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){showMessage('3D engine could not load. Check your internet connection and reload.');throw e}
@@ -105,7 +106,6 @@ player.position.set(0,0,3);
 
 // Progressive 3D asset streaming: only one extra model loads at a time.
 // Large vehicles/robots stay out of the initial critical path on low-memory phones.
-const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4) || innerWidth < 500;
 const streamedModels = [];
 function loadWorldFBX(url, position, targetSize, label, maxBytesHint) {
   return new Promise(resolve => {
