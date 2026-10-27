@@ -35,3 +35,14 @@ Le modèle FBX de l'arme rotative chargé par `index.html` reçoit maintenant la
 - [ ] Textures PBR finales incorporées dans les modèles.
 - [ ] Conversion et optimisation de chaque modèle FBX en GLB.
 - [ ] Tests de performance sur Android et intégration gameplay modèle par modèle.
+
+
+## Mise à jour runtime — 27 octobre 2026
+- [x] Chargement différé de deux modèles FBX dans la scène (structure et véhicule furtif) après le démarrage, en série pour éviter de bloquer l'écran de lancement.
+- [x] Sur les téléphones à mémoire limitée, les gros modèles de plus de 4,5 Mo sont différés plutôt que chargés au démarrage.
+- [x] Effets de tir simples avec flash et particules réutilisées (pool) afin d'éviter de créer de nouvelles géométries à chaque tir.
+- [x] Résolution de rendu plafonnée à 0,85× sur petit écran / appareil à mémoire limitée et à 1,1× ailleurs.
+- [x] Vérification syntaxique du script JavaScript après la modification.
+- [ ] Test réel sur Samsung Galaxy A06 : FPS, consommation mémoire, orientation des modèles et chargement des textures encore à confirmer.
+- [ ] Le reste des véhicules, robots et armes est conservé dans le dépôt mais n'est pas forcé dans la mémoire en même temps : cela risquerait de provoquer des ralentissements ou un arrêt du navigateur mobile.
+- [ ] Les textures photographiques sont uniquement des cartes de couleur téléchargées à distance avec fallback procédural ; les textures PBR complètes (normal/roughness/metallic) ne sont pas encore incorporées aux FBX.
