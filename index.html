@@ -11,9 +11,9 @@
 #game{position:fixed;inset:0}canvas{display:block;width:100%;height:100%}
 .hud{position:fixed;inset:0;pointer-events:none;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:space-between}
 .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.brand,.status,.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(8px);border-radius:12px;padding:10px 12px}.brand strong{display:block;font-size:clamp(12px,3.5vw,17px);letter-spacing:.04em}.brand small{color:#9fb8c0;font-size:11px}.status{font-size:12px;line-height:1.7;text-align:right}.bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}.hint{max-width:52%;font-size:11px;color:#c2d1d5;background:var(--panel);padding:8px 10px;border-radius:10px;border:1px solid var(--line)}
-.controls{pointer-events:auto;display:flex;gap:8px;align-items:flex-end}.btn{border:1px solid var(--line);background:rgba(9,19,26,.88);color:#fff;border-radius:14px;min-width:56px;min-height:54px;padding:8px;font-weight:700;font-size:11px;touch-action:none}.btn:active,.btn.active{border-color:var(--accent);background:rgba(106,70,24,.88)}#stick{pointer-events:auto;width:112px;height:112px;border:1px solid #8da6ad88;border-radius:50%;background:#07121a88;position:relative;touch-action:none;flex-shrink:0}#knob{position:absolute;left:50%;top:50%;width:42px;height:42px;transform:translate(-50%,-50%);border-radius:50%;background:#d6e2e5aa;border:1px solid #fff8}
+.controls{pointer-events:auto;display:grid;grid-template-columns:repeat(2,minmax(54px,1fr));gap:6px;align-items:end;width:124px;flex-shrink:0}.btn{border:1px solid var(--line);background:rgba(9,19,26,.92);color:#fff;border-radius:12px;min-width:0;width:100%;min-height:48px;padding:6px 4px;font-weight:800;font-size:10px;touch-action:none}.btn:active,.btn.active{border-color:var(--accent);background:rgba(106,70,24,.88)}#stick{pointer-events:auto;width:112px;height:112px;border:1px solid #8da6ad88;border-radius:50%;background:#07121a88;position:relative;touch-action:none;flex-shrink:0}#knob{position:absolute;left:50%;top:50%;width:42px;height:42px;transform:translate(-50%,-50%);border-radius:50%;background:#d6e2e5aa;border:1px solid #fff8}
 #message{position:fixed;left:50%;top:25%;transform:translateX(-50%);background:#08131ddd;border:1px solid var(--line);padding:10px 14px;border-radius:10px;font-size:13px;max-width:85%;text-align:center;display:none}
-@media(min-width:800px){.hud{padding:20px}.btn{min-width:68px;min-height:58px}.hint{font-size:13px}}
+@media(max-width:520px){.hint{display:none}.bottom{gap:8px}.controls{width:116px;grid-template-columns:repeat(2,minmax(50px,1fr))}#stick{width:100px;height:100px}.btn{min-height:46px}}\n@media(min-width:800px){.hud{padding:20px}.btn{min-height:58px;font-size:12px}.hint{font-size:13px}}
 </style>
 </head>
 <body>
@@ -26,7 +26,7 @@
  <div class="bottom">
   <div id="stick" aria-label="Movement joystick"><div id="knob"></div></div>
   <div class="hint">Move with the joystick. Drag the open screen to look around. Tap FIRE to shoot hostile drones. Press R to reload.</div>
-  <div class="controls"><button class="btn" id="aim">LOOK</button><button class="btn" id="fire">FIRE</button><button class="btn" id="run">SPRINT</button></div>
+  <div class="controls"><button class="btn" id="aim" aria-label="Aim">AIM</button><button class="btn" id="fire" aria-label="Shoot">TIRER</button><button class="btn" id="jump" aria-label="Jump">SAUTER</button><button class="btn" id="run" aria-label="Sprint">COURIR</button><button class="btn" id="reload" aria-label="Reload">RECHARGER</button></div>
  </div>
 </div>
 <div id="message"></div>
@@ -98,7 +98,7 @@ function reloadWeapon(){ammo=30;document.querySelector('#ammo').textContent=ammo
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
  ammo--;document.querySelector('#ammo').textContent=ammo+'/120';shots++;triggerWeaponVFX();
- const ray=new THREE.Raycaster();const shotOrigin=new THREE.Vector3(player.position.x,1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
+ const ray=new THREE.Raycaster();const shotOrigin=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
  if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
@@ -107,7 +107,8 @@ function shootHostile(){
  }else showMessage('TIR · ajuste le viseur');
  document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');
 }
-\n// Simple readable futuristic outpost structures
+
+// Simple readable futuristic outpost structures
 // Small 1K photographic maps; remote failures do not block the game.
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel_embedded_concrete/gravel_embedded_concrete_diff_1k.jpg',24,'ground');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor/concrete_floor_diff_1k.jpg',2,'concrete');
@@ -298,28 +299,28 @@ function triggerWeaponVFX() {
   }
 }
 
-let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
+let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,aiming=false,jumpVelocity=0,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
 function setStick(e){stickRect=stick.getBoundingClientRect();const dx=e.clientX-(stickRect.left+stickRect.width/2),dy=e.clientY-(stickRect.top+stickRect.height/2),max=35,len=Math.hypot(dx,dy)||1;moveX=dx/Math.max(max,len);moveY=dy/Math.max(max,len);knob.style.left=(50+moveX*32)+'%';knob.style.top=(50+moveY*32)+'%'}
 stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setStick(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setStick(e)});function endStick(){stickId=null;moveX=moveY=0;knob.style.left='50%';knob.style.top='50%'}stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
 let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);
 document.querySelector('#run').addEventListener('pointerdown',()=>sprinting=true);for(const ev of ['pointerup','pointercancel','pointerleave'])document.querySelector('#run').addEventListener(ev,()=>sprinting=false);
-document.querySelector('#aim').addEventListener('click',()=>{pitch=pitch===-.13?-.02:-.13;showMessage('Camera view adjusted')});
+document.querySelector('#aim').addEventListener('click',()=>{aiming=!aiming;camera.fov=aiming?46:65;camera.updateProjectionMatrix();document.querySelector('#aim').classList.toggle('active',aiming);showMessage(aiming?'Visée activée':'Visée désactivée')});\ndocument.querySelector('#jump').addEventListener('pointerdown',e=>{e.preventDefault();if(player.position.y<=.015){jumpVelocity=6.2;showMessage('Saut')}});\ndocument.querySelector('#reload').addEventListener('pointerdown',e=>{e.preventDefault();reloadWeapon()});
 document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shootHostile()});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
 addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r')reloadWeapon()});
 const clock=new THREE.Clock();
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
-const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>0){player.position.y+=jumpVelocity*dt;jumpVelocity-=15*dt;if(player.position.y<=0){player.position.y=0;jumpVelocity=0}}const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  const blocks=[];for(let i=0;i<9;i++)blocks.push({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85});
  const blocked=(x,z)=>blocks.some(b=>Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz);
  const nx=player.position.x+forward.x*(-iy*speed)+right.x*(ix*speed),nz=player.position.z+forward.z*(-iy*speed)+right.z*(ix*speed);
  if(!blocked(nx,player.position.z))player.position.x=THREE.MathUtils.clamp(nx,-95,95);
  if(!blocked(player.position.x,nz))player.position.z=THREE.MathUtils.clamp(nz,-95,95);
  player.rotation.y=yaw;
-const target=new THREE.Vector3(player.position.x,1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*7,3.4,Math.cos(yaw)*7);camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
+const target=new THREE.Vector3(player.position.x,player.position.y+1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*(aiming?4.5:7),aiming?2.6:3.4,Math.cos(yaw)*(aiming?4.5:7));camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
 energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
  for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
   if(dist>2.3&&dist<42){enemy.position.x+=dx/dist*dt*.8;enemy.position.z+=dz/dist*dt*.8}
