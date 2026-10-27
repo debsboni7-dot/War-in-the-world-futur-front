@@ -40,7 +40,7 @@ try{({FBXLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/exampl
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb5bd);scene.fog=new THREE.Fog(0x9bb5bd,38,115);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xdceeff,0x4b5945,2.0));const sun=new THREE.DirectionalLight(0xffe1b0,2.0);sun.position.set(-18,32,12);scene.add(sun);
 // Lightweight procedural ground texture: generated locally, no external asset/license dependency.
 function makeNoiseTexture(base,seed=1,repeat=1,detail='grain'){
@@ -102,6 +102,84 @@ if(FBXLoader){
  },undefined,error=>console.warn('Rotary FBX failed to load; keeping placeholder weapon.',error));
 }
 player.position.set(0,0,3);
+
+// Progressive 3D asset streaming: only one extra model loads at a time.
+// Large vehicles/robots stay out of the initial critical path on low-memory phones.
+const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4) || innerWidth < 500;
+const streamedModels = [];
+function loadWorldFBX(url, position, targetSize, label, maxBytesHint) {
+  return new Promise(resolve => {
+    if (!FBXLoader) return resolve(null);
+    // Keep very large assets available in the repository but do not force them into RAM on mobile.
+    if (isLowMemoryPhone && maxBytesHint > 4.5) {
+      console.info('Deferred large asset on mobile:', label);
+      return resolve(null);
+    }
+    const loader = new FBXLoader();
+    loader.load(url, model => {
+      try {
+        const bounds = new THREE.Box3().setFromObject(model);
+        const size = bounds.getSize(new THREE.Vector3());
+        const center = bounds.getCenter(new THREE.Vector3());
+        const largest = Math.max(size.x, size.y, size.z);
+        if (!Number.isFinite(largest) || largest < 0.001) return resolve(null);
+        model.scale.setScalar(targetSize / largest);
+        model.position.set(position.x-center.x*model.scale.x, position.y-center.y*model.scale.y, position.z-center.z*model.scale.z);
+        model.traverse(o => {
+          if (!o.isMesh) return;
+          o.frustumCulled = true;
+          if (o.geometry) {
+            if (o.geometry.attributes && o.geometry.attributes.position) o.geometry.computeBoundingSphere();
+          }
+          if (o.material) {
+            const mats = Array.isArray(o.material) ? o.material : [o.material];
+            mats.forEach(mat => {
+              if (!mat) return;
+              if (!mat.map) { mat.map = metalTex; mat.userData = mat.userData || {}; mat.userData.runtimeFallback = true; }
+              mat.roughness = Math.max(.48, mat.roughness ?? .75);
+              mat.needsUpdate = true;
+            });
+          }
+        });
+        scene.add(model); streamedModels.push({model,label,position:new THREE.Vector3(position.x,position.y,position.z)});
+        console.info('Streamed 3D asset:',label); resolve(model);
+      } catch (e) { console.warn('Could not prepare asset', label, e); resolve(null); }
+    }, undefined, err => { console.warn('Optional 3D asset failed; scene fallback retained:', label, err); resolve(null); });
+  });
+}
+// Stream in the compact outpost and stealth vehicle after the first frame is already running.
+setTimeout(async () => {
+  await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx', {x:0,y:0,z:-28}, 7, 'outpost structure', 2.8);
+  await new Promise(r => setTimeout(r, 1200));
+  await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx', {x:8,y:0,z:-8}, 5, 'stealth vehicle', 2.7);
+}, 2600);
+
+// Reusable low-cost muzzle flash and pooled particles (no per-shot geometry allocation).
+const vfxGroup = new THREE.Group(); scene.add(vfxGroup);
+const flashMat = new THREE.MeshBasicMaterial({color:0xffd36a, transparent:true, opacity:0, depthWrite:false});
+const muzzleFlash = new THREE.Mesh(new THREE.SphereGeometry(.12,6,5), flashMat);
+vfxGroup.add(muzzleFlash);
+const particleGeometry = new THREE.SphereGeometry(.035,4,3);
+const particleMaterial = new THREE.MeshBasicMaterial({color:0xff9b3d, transparent:true, opacity:.9, depthWrite:false});
+const particles = [];
+for (let i=0;i<18;i++) {
+  const mesh = new THREE.Mesh(particleGeometry, particleMaterial.clone());
+  mesh.visible = false; vfxGroup.add(mesh);
+  particles.push({mesh,life:0,velocity:new THREE.Vector3()});
+}
+let vfxClock = 0;
+function triggerWeaponVFX() {
+  const muzzle = new THREE.Vector3(.58,1.25,-.92).applyAxisAngle(new THREE.Vector3(0,1,0), yaw).add(player.position);
+  muzzleFlash.position.copy(muzzle); muzzleFlash.scale.set(1.6,1.6,2.2); flashMat.opacity=.95; vfxClock=.075;
+  let used=0;
+  for (const p of particles) {
+    if (p.life>0) continue;
+    p.mesh.visible=true; p.life=.22+Math.random()*.16; p.mesh.position.copy(muzzle);
+    p.velocity.set((Math.random()-.5)*2.4, Math.random()*1.8, -1.4-Math.random()*2.4).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+    if (++used>=7) break;
+  }
+}
+
 let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
@@ -110,14 +188,14 @@ stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCap
 let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);
 document.querySelector('#run').addEventListener('pointerdown',()=>sprinting=true);for(const ev of ['pointerup','pointercancel','pointerleave'])document.querySelector('#run').addEventListener(ev,()=>sprinting=false);
 document.querySelector('#aim').addEventListener('click',()=>{pitch=pitch===-.13?-.02:-.13;showMessage('Camera view adjusted')});
-document.querySelector('#fire').addEventListener('click',()=>{shots++;document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');showMessage('Weapon test fired · '+shots+' shot'+(shots===1?'':'s'))});
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+document.querySelector('#fire').addEventListener('click',()=>{shots++;triggerWeaponVFX();document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');showMessage('Weapon test fired · '+shots+' shot'+(shots===1?'':'s'))});
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
 const clock=new THREE.Clock();
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,-iy*speed);player.position.addScaledVector(right,ix*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-95,95);player.position.z=THREE.MathUtils.clamp(player.position.z,-95,95);player.rotation.y=yaw;
 const target=new THREE.Vector3(player.position.x,1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*7,3.4,Math.cos(yaw)*7);camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
-energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';renderer.render(scene,camera)}
+energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.075*.95;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
 showMessage('Field test ready. Move to explore the outpost.');requestAnimationFrame(animate);
 </script>
 </body></html>
