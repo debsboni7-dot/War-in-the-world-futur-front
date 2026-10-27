@@ -98,7 +98,7 @@ function reloadWeapon(){ammo=30;document.querySelector('#ammo').textContent=ammo
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
  ammo--;document.querySelector('#ammo').textContent=ammo+'/120';shots++;triggerWeaponVFX();
- const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(0,0),camera);
+ const ray=new THREE.Raycaster();const shotOrigin=new THREE.Vector3(player.position.x,1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
  if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
