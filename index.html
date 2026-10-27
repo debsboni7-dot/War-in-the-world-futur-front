@@ -36,8 +36,10 @@ const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4)
 function showMessage(t){message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>message.style.display='none',2200)}
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){showMessage('3D engine could not load. Check your internet connection and reload.');throw e}
-let FBXLoader=null;
-try{({FBXLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js'))}catch(e){console.warn('FBX loader unavailable; visible fallbacks remain active.',e);showMessage('3D model loader unavailable — fallback soldier and weapon active')}
+let FBXLoader=null, GLTFLoader=null;
+try{({FBXLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js'))}catch(e){console.warn('FBX loader unavailable; visible fallbacks remain active.',e)}
+try{({GLTFLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js'))}catch(e){console.warn('GLTF loader unavailable; textured GLB assets will use fallbacks.',e)}
+if(!FBXLoader&&!GLTFLoader)showMessage('3D model loaders unavailable — fallback soldier and weapon active');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb5bd);scene.fog=new THREE.Fog(0x9bb5bd,38,115);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
@@ -146,18 +148,24 @@ function attachWeaponToHand(){
  // Keep the fallback weapon visible as a safety net if the imported FBX is off-screen or malformed.
   gun.visible=true;console.info('Weapon attached:',weaponAnchor);
 }
-// Exactly one test weapon: the existing rotary FBX. Use the procedural gun only as fallback.
-if(FBXLoader){
- const weaponLoader=new FBXLoader();
- weaponLoader.load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',model=>{
-  try{
-   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);mat.needsUpdate=true})});
-   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
-   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
-   model.scale.setScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();
-  }catch(e){console.warn('Weapon model invalid; using fallback.',e)}
- },undefined,e=>{console.warn('Weapon FBX failed; using fallback gun.',e);gun.visible=true;showMessage('FBX weapon failed — visible test gun active')});
+// The tactical pump-action shotgun is the active weapon. Prefer its Meshy PBR GLB;
+ // retain the existing rotary FBX only as a fallback if the textured GLB is unavailable.
+function prepareWeaponModel(model){
+ try{
+  model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);mat.needsUpdate=true})});
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
+  if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
+  model.scale.setScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();gun.visible=false;
+ }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
+let weaponFallbackStarted=false;
+function loadFallbackWeapon(){
+ if(weaponFallbackStarted||!FBXLoader)return;weaponFallbackStarted=true;
+ new FBXLoader().load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',prepareWeaponModel,undefined,()=>{gun.visible=true});
+}
+if(GLTFLoader){
+ new GLTFLoader().load('assets/models/textured/fusil-pompe-tactique-pbr.glb',gltf=>prepareWeaponModel(gltf.scene),undefined,()=>loadFallbackWeapon());
+}else loadFallbackWeapon();
 player.position.set(0,0,3);
 
 // Progressive 3D asset streaming: only one extra model loads at a time.
@@ -203,12 +211,33 @@ function loadWorldFBX(url, position, targetSize, label, maxBytesHint) {
     }, undefined, err => { console.warn('Optional 3D asset failed; scene fallback retained:', label, err); resolve(null); });
   });
 }
-// Stream in the compact outpost and stealth vehicle after the first frame is already running.
-setTimeout(async () => {
-  await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx', {x:0,y:0,z:-28}, 7, 'outpost structure', 2.8);
-  await new Promise(r => setTimeout(r, 1200));
-  await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx', {x:8,y:0,z:-8}, 5, 'stealth vehicle', 2.7);
-}, 2600);
+// Load the four selected PBR assets progressively, after the first frame.
+// If a textured GLB is not available yet, fall back to the existing FBX/procedural scene.
+function loadWorldGLB(url, position, targetSize, label){
+ return new Promise(resolve=>{
+  if(!GLTFLoader)return resolve(null);
+  new GLTFLoader().load(url,gltf=>{
+   try{
+    const model=gltf.scene,bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
+    if(!Number.isFinite(largest)||largest<.001)throw new Error('Invalid GLB bounds');
+    model.scale.setScalar(targetSize/largest);
+    model.position.set(position.x-center.x*model.scale.x,position.y-bounds.min.y*model.scale.y,position.z-center.z*model.scale.z);
+    model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();}});
+    scene.add(model);streamedModels.push({model,label,position:new THREE.Vector3(position.x,position.y,position.z)});console.info('Loaded textured PBR GLB:',label);resolve(model);
+   }catch(e){console.warn('Textured GLB invalid:',label,e);resolve(null)}
+  },undefined,e=>{console.warn('Textured GLB not ready; using fallback:',label,e);resolve(null)});
+ });
+}
+setTimeout(async()=>{
+ const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr.glb',{x:0,y:0,z:-28},7,'PBR outpost structure');
+ if(!structure)await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',{x:0,y:0,z:-28},7,'outpost structure fallback',2.8);
+ await new Promise(r=>setTimeout(r,900));
+ const vehicle=await loadWorldGLB('assets/models/textured/vehicule-blinde-compact-pbr.glb',{x:8,y:0,z:-8},5,'PBR compact armored vehicle');
+ if(!vehicle)await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx',{x:8,y:0,z:-8},5,'stealth vehicle fallback',2.7);
+ await new Promise(r=>setTimeout(r,900));
+ const robot=await loadWorldGLB('assets/models/textured/robot-combat-pbr.glb',{x:-7,y:0,z:-7},2.1,'PBR combat robot');
+ if(!robot)await loadWorldFBX('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',{x:-7,y:0,z:-7},2.1,'combat robot fallback',10.1);
+},2600);
 
 // Reusable low-cost muzzle flash and pooled particles (no per-shot geometry allocation).
 const vfxGroup = new THREE.Group(); scene.add(vfxGroup);
