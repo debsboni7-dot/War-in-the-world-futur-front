@@ -1,0 +1,12 @@
+{
+  "name": "couteau-combat",
+  "prompt": "Realistic military combat knife as a single standalone game-ready 3D asset. Fixed broad utility blade with a believable sharpened edge, dark coated steel, textured non-slip grip, hand guard, pommel, and separate compact sheath beside it. Accurate proportions, clean topology, restrained wear, realistic PBR materials, high-quality textures, isolated object, full model visible, no hands, no people, no text, no logo, no background. Generate with Meshy 6 Lite only. Export GLB and metadata.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a17db6-8be0-74c2-b9ee-28801f65d591",
+  "texture_task_id": "01a17db7-44be-7772-a333-a77e6e925cb9",
+  "generated_at": "2026-10-27T14:16:10.698Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
