@@ -21,11 +21,11 @@
 <div class="hud">
  <div class="top">
   <div class="brand"><strong>WAR IN THE WORLD</strong><small>FUTURE FRONT · FIELD TEST</small></div>
-  <div class="status"><div>MISSION <b id="mission">01</b></div><div>ENERGY <b id="energy">100%</b></div><div>FPS <b id="fps">--</b></div></div>
+  <div class="status"><div>MISSION <b id="mission">01</b></div><div>ENERGY <b id="energy">100%</b></div><div>FPS <b id="fps">--</b></div><div>HOSTILES <b id="hostiles">04</b></div><div>AMMO <b id="ammo">30/120</b></div></div>
  </div>
  <div class="bottom">
   <div id="stick" aria-label="Movement joystick"><div id="knob"></div></div>
-  <div class="hint">Move with the joystick. Drag the open screen to look around. Tap FIRE to test your weapon.</div>
+  <div class="hint">Move with the joystick. Drag the open screen to look around. Tap FIRE to shoot hostile drones. Press R to reload.</div>
   <div class="controls"><button class="btn" id="aim">LOOK</button><button class="btn" id="fire">FIRE</button><button class="btn" id="run">SPRINT</button></div>
  </div>
 </div>
@@ -76,7 +76,38 @@ const groundMat=new THREE.MeshStandardMaterial({map:groundTex,color:0xffffff,rou
 function box(w,h,d,color,x,y,z,texture=null){const mat=new THREE.MeshStandardMaterial({color,map:texture,roughness:texture===metalTex?.68:.9,metalness:texture===metalTex?.35:0});if(texture===concreteTex)mat.userData.photoKind='concrete';if(texture===metalTex)mat.userData.photoKind='metal';const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);scene.add(m);return m}
 function tree(x,z,s=1){box(.35*s,2*s,.35*s,0xffffff,x,s,z,barkTex);const crown=new THREE.Mesh(new THREE.ConeGeometry(1.25*s,3*s,6),new THREE.MeshStandardMaterial({color:0xffffff,map:foliageTex,roughness:1}));crown.position.set(x,2.6*s,z);scene.add(crown)}
 for(let i=0;i<70;i++){const a=Math.random()*Math.PI*2,r=13+Math.random()*65,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(x)<7&&Math.abs(z)<9)continue;tree(x,z,.65+Math.random()*.85)}
-// Simple readable futuristic outpost structures
+// Mobile-friendly sci-fi hostiles with hit points and simple pursuit behavior.
+const enemies=[];
+const enemyMetal=new THREE.MeshStandardMaterial({color:0x34414a,metalness:.7,roughness:.38});
+const enemyRed=new THREE.MeshStandardMaterial({color:0xff4057,emissive:0x8d071b,emissiveIntensity:1.4,metalness:.25,roughness:.3});
+function spawnEnemy(x,z,index){
+ const e=new THREE.Group();e.position.set(x,0,z);e.userData={health:100,maxHealth:100,dead:false,cooldown:1+index*.3,flash:0};
+ const body=new THREE.Mesh(new THREE.BoxGeometry(.72,1.05,.42),enemyMetal);body.position.y=1.05;e.add(body);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.48,.36,.4),enemyMetal);head.position.set(0,1.78,-.02);e.add(head);
+ const eye=new THREE.Mesh(new THREE.BoxGeometry(.32,.09,.045),enemyRed);eye.position.set(0,1.8,-.235);e.add(eye);
+ for(const side of [-1,1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.2,.62,.24),enemyMetal);leg.position.set(side*.22,.36,0);e.add(leg);const arm=new THREE.Mesh(new THREE.BoxGeometry(.18,.68,.22),enemyMetal);arm.position.set(side*.49,1.12,-.03);e.add(arm)}
+ const hp=new THREE.Group();hp.position.y=2.25;e.add(hp);
+ const back=new THREE.Mesh(new THREE.PlaneGeometry(1,.1),new THREE.MeshBasicMaterial({color:0x1b2025,side:THREE.DoubleSide}));hp.add(back);
+ const fill=new THREE.Mesh(new THREE.PlaneGeometry(.96,.065),new THREE.MeshBasicMaterial({color:0xff4057,side:THREE.DoubleSide}));fill.position.z=.006;hp.add(fill);hp.userData.fill=fill;e.userData.hp=hp;
+ scene.add(e);enemies.push(e);
+}
+spawnEnemy(-5,-7,0);spawnEnemy(5,-12,1);spawnEnemy(-9,-20,2);spawnEnemy(10,-24,3);
+function updateEnemyCounter(){document.querySelector('#hostiles').textContent=String(enemies.filter(e=>!e.userData.dead).length).padStart(2,'0')}
+let ammo=30;
+function reloadWeapon(){ammo=30;document.querySelector('#ammo').textContent=ammo+'/120';showMessage('Chargeur rechargé')}
+function shootHostile(){
+ if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
+ ammo--;document.querySelector('#ammo').textContent=ammo+'/120';shots++;triggerWeaponVFX();
+ const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(0,0),camera);
+ const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
+ const hit=ray.intersectObjects(targets,false)[0];
+ if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
+  if(enemies.includes(target)){const d=target.userData;d.health=Math.max(0,d.health-34);d.flash=.13;const fill=d.hp.userData.fill;fill.scale.x=Math.max(.001,d.health/d.maxHealth);fill.position.x=-(1-d.health/d.maxHealth)*.48;
+   if(d.health<=0){d.dead=true;target.visible=false;updateEnemyCounter();showMessage('CIBLE NEUTRALISÉE')}else showMessage('IMPACT CONFIRMÉ')}
+ }else showMessage('TIR · ajuste le viseur');
+ document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');
+}
+\n// Simple readable futuristic outpost structures
 // Small 1K photographic maps; remote failures do not block the game.
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel_embedded_concrete/gravel_embedded_concrete_diff_1k.jpg',24,'ground');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor/concrete_floor_diff_1k.jpg',2,'concrete');
@@ -275,14 +306,30 @@ stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCap
 let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);
 document.querySelector('#run').addEventListener('pointerdown',()=>sprinting=true);for(const ev of ['pointerup','pointercancel','pointerleave'])document.querySelector('#run').addEventListener(ev,()=>sprinting=false);
 document.querySelector('#aim').addEventListener('click',()=>{pitch=pitch===-.13?-.02:-.13;showMessage('Camera view adjusted')});
-document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shots++;triggerWeaponVFX();document.querySelector('#mission').textContent=String(1+Math.floor(shots/8)).padStart(2,'0');showMessage('TIR TEST · '+shots);});
+document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shootHostile()});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r')reloadWeapon()});
 const clock=new THREE.Clock();
 function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
-const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,-iy*speed);player.position.addScaledVector(right,ix*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-95,95);player.position.z=THREE.MathUtils.clamp(player.position.z,-95,95);player.rotation.y=yaw;
+const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const blocks=[];for(let i=0;i<9;i++)blocks.push({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85});
+ const blocked=(x,z)=>blocks.some(b=>Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz);
+ const nx=player.position.x+forward.x*(-iy*speed)+right.x*(ix*speed),nz=player.position.z+forward.z*(-iy*speed)+right.z*(ix*speed);
+ if(!blocked(nx,player.position.z))player.position.x=THREE.MathUtils.clamp(nx,-95,95);
+ if(!blocked(player.position.x,nz))player.position.z=THREE.MathUtils.clamp(nz,-95,95);
+ player.rotation.y=yaw;
 const target=new THREE.Vector3(player.position.x,1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*7,3.4,Math.cos(yaw)*7);camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
-energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';if(militaryMixer)militaryMixer.update(dt);if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
+energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
+ for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
+  if(dist>2.3&&dist<42){enemy.position.x+=dx/dist*dt*.8;enemy.position.z+=dz/dist*dt*.8}
+  if(dist>.01)enemy.rotation.y=Math.atan2(-dx,-dz);
+  d.cooldown-=dt;if(dist<2.2&&d.cooldown<=0){energy=Math.max(0,energy-8);d.cooldown=1.2;showMessage('ATTAQUE ENNEMIE · ÉNERGIE -8')}
+  if(d.flash>0){d.flash=Math.max(0,d.flash-dt);if(d.flash===0)enemy.children.forEach(o=>{if(o.isMesh&&o.material===enemyRed)o.material=enemyMetal})}
+  else if(d.flash>0)enemy.children.forEach(o=>{if(o.isMesh&&o.material===enemyMetal)o.material=enemyRed});
+  d.hp.quaternion.copy(camera.quaternion);
+ }
+ document.querySelector('#energy').textContent=Math.round(energy)+'%';if(militaryMixer)militaryMixer.update(dt);if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
 showMessage('Field test ready. Move to explore the outpost.');requestAnimationFrame(animate);
 </script>
 </body></html>
