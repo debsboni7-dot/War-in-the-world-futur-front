@@ -78,7 +78,7 @@ jobs:
           async function main() {
             if (!process.env.MESHY_API_KEY) throw new Error('Secret MESHY_API_KEY absent dans GitHub Actions.');
             const rawName = (process.env.ASSET_NAME || '').trim();
-            const name = (process.env.ISSUE_EVENT === 'true' ? rawName.replace(/^\\[GENERATE3D\\]\\s*/i, '') : rawName)
+            const name = (process.env.ISSUE_EVENT === 'true' ? rawName.replace(/^\[GENERATE3D\]\s*/i, '') : rawName)
               .trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
             const prompt = (process.env.MODEL_PROMPT || '').trim();
             if (!name) throw new Error('Nom de fichier invalide.');
