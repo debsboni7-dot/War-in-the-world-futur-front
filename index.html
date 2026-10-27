@@ -91,7 +91,7 @@ const gun= new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStanda
 if(FBXLoader){
  const weaponLoader=new FBXLoader();
  weaponLoader.load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',model=>{
-  model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];for(const mat of mats){if(mat){mat.roughness=Math.max(.35,mat.roughness??.7);mat.needsUpdate=true}}}}});
+  model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];for(const mat of mats){if(mat){if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??.0);mat.needsUpdate=true}}}}});
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
   const maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001){console.warn('Rotary FBX has invalid dimensions; keeping placeholder.');return}
