@@ -1,0 +1,126 @@
+name: Texture existing 3D model with Meshy
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      asset_name:
+        description: "Nom de l’asset"
+        required: true
+        type: string
+      model_path:
+        description: "Chemin du modèle source dans le dépôt"
+        required: true
+        type: string
+      texture_prompt:
+        description: "Description de la texture PBR souhaitée"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meshy-texture-jobs
+  cancel-in-progress: false
+
+jobs:
+  texture:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.issue.title, '[TEXTURE3D] ') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Retexture source model with Meshy
+        env:
+          MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          INPUT_ASSET_NAME: ${{ inputs.asset_name }}
+          INPUT_MODEL_PATH: ${{ inputs.model_path }}
+          INPUT_TEXTURE_PROMPT: ${{ inputs.texture_prompt }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          async function api(url, options={}) {
+            const r = await fetch(url, { ...options, headers: {
+              Authorization: `Bearer ${process.env.MESHY_API_KEY}`,
+              'Content-Type':'application/json', ...(options.headers||{})
+            }});
+            const t=await r.text();
+            if(!r.ok) throw new Error(`Meshy API ${r.status}: ${t.slice(0,1200)}`);
+            return t ? JSON.parse(t) : {};
+          }
+          async function waitTask(id) {
+            const until=Date.now()+30*60*1000;
+            while(Date.now()<until) {
+              const task=await api(`https://api.meshy.ai/openapi/v1/retexture/${id}`);
+              console.log(JSON.stringify({task_id:id,status:task.status,progress:task.progress,consumed_credits:task.consumed_credits}));
+              if(task.status==='SUCCEEDED') return task;
+              if(['FAILED','CANCELED'].includes(task.status)) throw new Error(`Meshy ${task.status}: ${task.task_error?.message||'no detail'}; consumed_credits=${task.consumed_credits}`);
+              await new Promise(r=>setTimeout(r,12000));
+            }
+            throw new Error('Timeout: vérifier Meshy Settings > API > Usage.');
+          }
+          async function main(){
+            if(!process.env.MESHY_API_KEY) throw new Error('Secret MESHY_API_KEY absent.');
+            let name, modelPath, prompt;
+            if(process.env.EVENT_NAME==='issues'){
+              name=(process.env.ISSUE_TITLE||'').replace(/^\[TEXTURE3D\]\s*/i,'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');
+              const body=process.env.ISSUE_BODY||'';
+              const p=body.split('\n').map(x=>x.trim());
+              modelPath=p.find(x=>x.startsWith('MODEL_PATH='))?.slice(11).trim();
+              prompt=p.find(x=>x.startsWith('TEXTURE_PROMPT='))?.slice(15).trim();
+            } else { name=process.env.INPUT_ASSET_NAME; modelPath=process.env.INPUT_MODEL_PATH; prompt=process.env.INPUT_TEXTURE_PROMPT; }
+            name=(name||'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,70);
+            if(!name||!modelPath||!prompt) throw new Error('Nom, MODEL_PATH et TEXTURE_PROMPT sont obligatoires.');
+            if(!modelPath.startsWith('assets/models/')||modelPath.includes('..')) throw new Error('MODEL_PATH doit pointer dans assets/models/.');
+            if(prompt.length>800) throw new Error('Le prompt texture doit faire au plus 800 caractères.');
+            const source=`https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/main/${modelPath}`;
+            const output=path.join('assets','models','textured',name+'.glb');
+            if(fs.existsSync(output)) throw new Error(`Refus de remplacer ${output} automatiquement.`);
+            console.log(`Source model: ${source}`);
+            console.log('Soumission d’une tâche Meshy Retexture (crédits Meshy utilisés dès le démarrage).');
+            const created=await api('https://api.meshy.ai/openapi/v1/retexture',{method:'POST',body:JSON.stringify({
+              model_url:source,
+              text_style_prompt:prompt,
+              ai_model:'meshy-6-lite',
+              enable_pbr:true,
+              enable_original_uv:true,
+              target_formats:['glb']
+            })});
+            if(!created.result) throw new Error('Meshy n’a pas retourné de task ID.');
+            const task=await waitTask(created.result);
+            const url=task.model_urls?.glb;
+            if(!url) throw new Error('La tâche a réussi mais aucun GLB n’a été renvoyé.');
+            const r=await fetch(url); if(!r.ok) throw new Error('Téléchargement GLB impossible: HTTP '+r.status);
+            const data=Buffer.from(await r.arrayBuffer());
+            if(data.length<1000) throw new Error('GLB trop petit, téléchargement suspect.');
+            fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,data);
+            fs.writeFileSync(path.join(path.dirname(output),name+'.metadata.json'),JSON.stringify({
+              name,source_model_path:modelPath,source_model_url:source,texture_prompt:prompt,
+              provider:'Meshy API Retexture',model:'meshy-6-lite',format:'glb',texture:'PBR',
+              texture_task_id:task.id||created.result,consumed_credits:task.consumed_credits??null,
+              generated_at:new Date().toISOString()
+            },null,2)+'\n');
+            console.log(`OUTPUT=${output}; BYTES=${data.length}; MESHY_TASK=${task.id||created.result}; CONSUMED_CREDITS=${task.consumed_credits??'not reported'}`);
+          }
+          main().catch(e=>{console.error(e.message||e);process.exit(1)});
+          NODE
+
+      - name: Commit textured model
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/models/textured/
+          git diff --cached --quiet && { echo "No textured output was saved"; exit 1; }
+          git commit -m "Add Meshy PBR textured asset"
+          git push
