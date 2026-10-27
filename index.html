@@ -80,27 +80,80 @@ loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor/concrete_floor_diff_1k.jpg',2,'concrete');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_painted_metal/rusty_painted_metal_diff_1k.jpg',2,'metal');
 for(let i=0;i<9;i++){let x=(i%3-1)*9,z=-16-Math.floor(i/3)*7;box(4,2.5,3,0xffffff,x,1.25,z,concreteTex);box(4.2,.25,3.2,0xffffff,x,2.6,z,metalTex);box(.15,1.1,.15,0xffa640,x-1.4,1.3,z+1.56);box(.15,1.1,.15,0xffa640,x+1.4,1.3,z+1.56)}
-// Player: lightweight placeholder built from simple geometry; no external model needed.
+// Player movement root: the military FBX is the visible character when loaded.
 const player=new THREE.Group();scene.add(player);
 const suit=new THREE.MeshStandardMaterial({color:0x344b59,roughness:.72}),armor=new THREE.MeshStandardMaterial({color:0x9ba9ad,metalness:.45,roughness:.48}),visor=new THREE.MeshStandardMaterial({color:0x32c9d0,metalness:.35,roughness:.25,emissive:0x07545a});
 function part(geo,mat,x,y,z){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);player.add(m);return m}
-part(new THREE.CapsuleGeometry(.42,.8,3,6),suit,0,1.25,0);part(new THREE.SphereGeometry(.34,8,6),armor,0,2.05,0);part(new THREE.BoxGeometry(.45,.12,.08),visor,0,2.08,-.3);
-part(new THREE.BoxGeometry(.22,.7,.24),armor,-.55,1.3,0);part(new THREE.BoxGeometry(.22,.7,.24),armor,.55,1.3,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,-.23,.4,0);part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0);
-const gun= new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));gun.position.set(.58,1.25,-.45);player.add(gun);
-// Load just the smallest real weapon FBX (about 1.59 MiB), on demand.
-// Do not load the other 16 FBX files at startup; keep a placeholder if this fails.
+const placeholderParts=[];
+placeholderParts.push(part(new THREE.CapsuleGeometry(.42,.8,3,6),suit,0,1.25,0));
+placeholderParts.push(part(new THREE.SphereGeometry(.34,8,6),armor,0,2.05,0));
+placeholderParts.push(part(new THREE.BoxGeometry(.45,.12,.08),visor,0,2.08,-.3));
+placeholderParts.push(part(new THREE.BoxGeometry(.22,.7,.24),armor,-.55,1.3,0));
+placeholderParts.push(part(new THREE.BoxGeometry(.22,.7,.24),armor,.55,1.3,0));
+placeholderParts.push(part(new THREE.BoxGeometry(.3,.72,.32),suit,-.23,.4,0));
+placeholderParts.push(part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0));
+const gun=new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));
+gun.position.set(.58,1.25,-.45);player.add(gun);
+let militaryModel=null, militaryMixer=null, militaryAnimations=[], weaponModel=null, weaponAnchor=null;
+function findRightHand(rootModel){
+ let found=null;
+ rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[ _.-]/g,'');if(['righthand','handr','mixamorigrighthand','bip01rhand','rightwrist','handright'].includes(n)||(/right/.test(n)&&/hand/.test(n)))found=o});
+ return found;
+}
+// Load the user's configured military character first. The movement root stays independent,
+// so joystick/camera motion works even when the FBX contains no usable animation clips.
+if(FBXLoader){
+ const soldierLoader=new FBXLoader();
+ soldierLoader.load('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',model=>{
+  try{
+   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+   const maxDim=Math.max(size.x,size.y,size.z);
+   if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid military model bounds');
+   // Target human-scale height while preserving the model proportions.
+   const height=Math.max(size.y,.001),scale=1.85/height;
+   model.scale.setScalar(scale);
+   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+   model.traverse(o=>{
+    if(!o.isMesh)return;o.frustumCulled=true;
+    if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.runtimeFallbackTexture=true}mat.roughness=Math.max(.48,mat.roughness??.75);mat.needsUpdate=true});
+   });
+   placeholderParts.forEach(p=>p.visible=false);militaryModel=model;player.add(model);
+   if(model.animations&&model.animations.length){militaryAnimations=model.animations;militaryMixer=new THREE.AnimationMixer(model);const preferred=model.animations.find(a=>/idle|stand|breath/i.test(a.name))||model.animations[0];militaryMixer.clipAction(preferred).play();console.info('Military character animation:',preferred.name)}
+   else console.info('Military character loaded; no embedded animation clips found.');
+   // If the model has a named right-hand bone, re-parent the weapon there after it loads.
+   if(weaponModel){attachWeaponToHand();}
+   showMessage('Military character loaded');
+  }catch(e){console.warn('Military character could not be prepared; placeholder retained.',e);model.parent?.remove(model)}
+ },undefined,e=>{console.warn('Military FBX failed; placeholder retained.',e);showMessage('Military model failed to load; placeholder remains')});
+}
+function attachWeaponToHand(){
+ if(!weaponModel||!militaryModel)return;
+ const hand=findRightHand(militaryModel);
+ if(hand){
+  weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
+  // Conservative hand grip placement; fine alignment can be tuned after a visual test.
+  weaponModel.position.set(.04,-.025,-.12);weaponModel.rotation.set(0,Math.PI/2,0);
+  weaponAnchor='right-hand bone';
+ }else{
+  weaponModel.parent?.remove(weaponModel);player.add(weaponModel);
+  weaponModel.position.set(.38,1.22,-.34);weaponModel.rotation.set(0,0,0);
+  weaponAnchor='fallback hand position';
+ }
+ gun.visible=false;console.info('Weapon attached:',weaponAnchor);
+}
+// Exactly one test weapon: the existing rotary FBX. Use the procedural gun only as fallback.
 if(FBXLoader){
  const weaponLoader=new FBXLoader();
  weaponLoader.load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',model=>{
-  model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];for(const mat of mats){if(mat){if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??.0);mat.needsUpdate=true}}}}});
-  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
-  const maxDim=Math.max(size.x,size.y,size.z);
-  if(!Number.isFinite(maxDim)||maxDim<.0001){console.warn('Rotary FBX has invalid dimensions; keeping placeholder.');return}
-  const scale=.85/maxDim;model.scale.setScalar(scale);
-  model.position.set(.58-center.x*scale,1.25-center.y*scale,-.45-center.z*scale);
-  player.add(model);gun.visible=false;
-  console.info('Rotary FBX loaded. Check orientation, textures and hand alignment on device.');
- },undefined,error=>console.warn('Rotary FBX failed to load; keeping placeholder weapon.',error));
+  try{
+   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);mat.needsUpdate=true})});
+   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
+   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
+   model.scale.setScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();
+  }catch(e){console.warn('Weapon model invalid; using fallback.',e)}
+ },undefined,e=>console.warn('Weapon FBX failed; using fallback gun.',e));
 }
 player.position.set(0,0,3);
 
@@ -195,7 +248,7 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.get
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,-iy*speed);player.position.addScaledVector(right,ix*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-95,95);player.position.z=THREE.MathUtils.clamp(player.position.z,-95,95);player.rotation.y=yaw;
 const target=new THREE.Vector3(player.position.x,1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*7,3.4,Math.cos(yaw)*7);camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
-energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.075*.95;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
+energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));document.querySelector('#energy').textContent=Math.round(energy)+'%';if(militaryMixer)militaryMixer.update(dt);if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.075*.95;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
 showMessage('Field test ready. Move to explore the outpost.');requestAnimationFrame(animate);
 </script>
 </body></html>
