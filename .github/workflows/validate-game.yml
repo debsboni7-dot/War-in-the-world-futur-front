@@ -37,7 +37,9 @@ jobs:
             ['independent player facing', /if\s*\(mag\s*>\s*\.08\)\s*\{[^}]*playerYaw\s*=\s*Math\.atan2/s],
             ['player rotation uses facing state, not camera yaw', /player\.rotation\.y\s*=\s*playerYaw\s*;/],
             ['camera shoulder offset', /const shoulder=aiming\s*\?\s*1\.05\s*:\s*1\.2/],
-            ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/]
+            ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/],
+            ['instanced forest geometry', /new THREE\.InstancedMesh\(tree(?:Trunk|Crown)Geometry,tree(?:Trunk|Crown)Material,treeCount\)/],
+            ['reduced mobile render scale', /isLowMemoryPhone\?0\.7:0\.9/]
           ];
           for (const [label, pattern] of requiredCameraRules) if (!pattern.test(html)) throw new Error('Camera/gameplay regression: ' + label);
           console.log('Verified independent player facing, shoulder camera, and crosshair-aligned shots.');
