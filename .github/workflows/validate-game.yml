@@ -101,6 +101,7 @@ jobs:
             if (result.player && result.player.placeholderVisible) throw new Error('Primitive placeholder soldier must remain hidden');
             if (result.player && !['Meshy Ogo Rigged+Animated GLB','Meshy Ogo GLB'].includes(result.player.modelSource)) throw new Error('Generated human Ogo model was not loaded: '+result.player.modelSource);
             if (result.player && result.player.playerVisibleMeshes===0) throw new Error('No visible 3D mesh found under the player root');
+            if (result.player && (!result.player.weaponModelVisible || result.player.weaponAnchor !== 'right-hand bone')) throw new Error('Weapon model is not visibly attached to the right hand');
             if (pageErrors.length) throw new Error('Browser JavaScript errors: ' + pageErrors.join(' | '));
             if (result.fatal) throw new Error('Game startup displayed a fatal error: ' + result.message);
             if (afterTwoShots !== '28/120') throw new Error('Firing did not consume exactly two rounds: ' + afterTwoShots);
