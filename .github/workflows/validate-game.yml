@@ -70,7 +70,10 @@ jobs:
             page.on('pageerror', error => pageErrors.push(String(error)));
             await page.goto('http://127.0.0.1:4173/index.html', {waitUntil:'domcontentloaded',timeout:45000});
             await page.waitForTimeout(12000);
+            await page.waitForFunction(() => typeof window.__warPlayerTestState==='function' && window.__warPlayerTestState().modelSource==='Meshy Ogo GLB', null, {timeout:30000});
+            await page.waitForFunction(() => {const s=window.__warWorldAssetTestState?.();return !!s&&s.abandonedBuildingModelReady&&s.generatedRoadModelReady&&s.bikeModelReady}, null, {timeout:45000});
             const result = await page.evaluate(() => ({
+              worldAssets: typeof window.__warWorldAssetTestState==='function'?window.__warWorldAssetTestState():null,
               canvas: !!document.querySelector('#game canvas'),
               canvasSize: (() => { const c=document.querySelector('#game canvas'); return c ? [c.width,c.height] : [0,0] })(),
               fps: document.querySelector('#fps')?.textContent || '',
@@ -91,6 +94,7 @@ jobs:
             console.log(JSON.stringify({result,afterTwoShots,afterReload,aimEnabled,pageErrors},null,2));
             if (!result.canvas || result.canvasSize[0] < 1 || result.canvasSize[1] < 1) throw new Error('Game canvas did not initialize');
             if (result.player && result.player.placeholderVisible) throw new Error('Primitive placeholder soldier must remain hidden');
+            if (result.player && result.player.modelSource !== 'Meshy Ogo GLB') throw new Error('Generated human Ogo model was not loaded: '+result.player.modelSource);
             if (result.player && result.player.playerVisibleMeshes===0) throw new Error('No visible 3D mesh found under the player root');
             if (pageErrors.length) throw new Error('Browser JavaScript errors: ' + pageErrors.join(' | '));
             if (result.fatal) throw new Error('Game startup displayed a fatal error: ' + result.message);
