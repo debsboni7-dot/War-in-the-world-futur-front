@@ -183,36 +183,38 @@ function findRightHand(rootModel){
  rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[ _.-]/g,'');if(['righthand','handr','mixamorigrighthand','bip01rhand','rightwrist','handright'].includes(n)||(/right/.test(n)&&/hand/.test(n)))found=o});
  return found;
 }
-// Load the user's configured military character first. The movement root stays independent,
-// so joystick/camera motion works even when the FBX contains no usable animation clips.
-if(FBXLoader){
- const soldierLoader=new FBXLoader();
- soldierLoader.load('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',model=>{
-  try{
-   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
-   const maxDim=Math.max(size.x,size.y,size.z);
-   if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid military model bounds');
-   // Target human-scale height while preserving the model proportions.
-   const height=Math.max(size.y,.001),scale=1.85/height;
-   model.scale.setScalar(scale);
-   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
-   model.traverse(o=>{
-    if(!o.isMesh)return;o.frustumCulled=true;
-    if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
-    const mats=Array.isArray(o.material)?o.material:[o.material];
-    mats.forEach(mat=>{if(!mat)return;mat.userData=mat.userData||{};if(!mat.map){mat.userData.runtimeFallbackTexture=true;if(mat.color&&mat.color.getHex()===0xffffff)mat.color.set(0x6b7c83);mat.metalness=Math.min(mat.metalness??0,.18)}mat.roughness=Math.max(.68,mat.roughness??.75);mat.needsUpdate=true});
-   });
-   // Keep the readable fallback soldier visible until the imported model is visually confirmed on-device.
-    // This prevents an invisible/incorrectly oriented FBX from making the player disappear.
-    placeholderParts.forEach(p=>p.visible=false);militaryModel=model;player.add(model);
-   if(model.animations&&model.animations.length){militaryAnimations=model.animations;militaryMixer=new THREE.AnimationMixer(model);const preferred=model.animations.find(a=>/idle|stand|breath/i.test(a.name))||model.animations[0];militaryMixer.clipAction(preferred).play();console.info('Military character animation:',preferred.name)}
-   else console.info('Military character loaded; no embedded animation clips found.');
-   // If the model has a named right-hand bone, re-parent the weapon there after it loads.
-   if(weaponModel){attachWeaponToHand();}
-   showMessage('Ogo chargé · personnage 3D actif');
-  }catch(e){console.warn('Military character could not be prepared; placeholder retained.',e);model.parent?.remove(model)}
- },undefined,e=>{console.error('Military FBX failed; refusing cylindrical/primitive player fallback.',e);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo indisponible : recharge après vérification du réseau')});
+// Prefer the purpose-built human Ogo GLB; the old FBX is only a temporary compatibility fallback.
+function acceptPlayerModel(model,animations=[],source='unknown'){
+ try{
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z);
+  if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid player model bounds');
+  const height=Math.max(size.y,.001),scale=1.85/height;
+  model.scale.setScalar(scale);
+  model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.traverse(o=>{
+   if(!o.isMesh)return;o.frustumCulled=true;
+   if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
+   const mats=Array.isArray(o.material)?o.material:[o.material];
+   mats.forEach(mat=>{if(!mat)return;mat.userData=mat.userData||{};if(!mat.map){mat.userData.runtimeFallbackTexture=true;if(mat.color&&mat.color.getHex()===0xffffff)mat.color.set(0x6b7c83);mat.metalness=Math.min(mat.metalness??0,.18)}mat.roughness=Math.max(.68,mat.roughness??.75);mat.needsUpdate=true});
+  });
+  if(militaryModel)player.remove(militaryModel);
+  militaryModel=model;militaryAnimations=animations||[];militaryMixer=null;player.add(model);
+  placeholderParts.forEach(p=>p.visible=false);
+  if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);const preferred=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name))||militaryAnimations[0];militaryMixer.clipAction(preferred).play();console.info('Player animation:',preferred.name)}
+  if(weaponModel)attachWeaponToHand();
+  window.__warPlayerModelSource=source;
+  console.info('Playable character model loaded:',source);
+  showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
+ }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
 }
+function loadLegacyPlayer(){
+ if(!FBXLoader){showMessage('Modèle Ogo indisponible : vérifie la connexion');return}
+ new FBXLoader().load('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',model=>acceptPlayerModel(model,model.animations||[],'legacy FBX fallback'),undefined,e=>{console.error('Legacy player model failed:',e);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo indisponible : vérifie la connexion')});
+}
+if(GLTFLoader){
+ new GLTFLoader().load('assets/models/generated/ogo-player-character.glb',gltf=>acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo GLB'),undefined,e=>{console.warn('Generated Ogo GLB not yet available; using existing model temporarily.',e);loadLegacyPlayer()});
+}else loadLegacyPlayer();
 function attachWeaponToHand(){
  if(!weaponModel)return;
  const hand=militaryModel?findRightHand(militaryModel):null;
@@ -624,7 +626,7 @@ function applyRenderScale(){renderer.setPixelRatio(Math.min(devicePixelRatio||1,
 addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&!e.repeat)reloadWeapon()});
 function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
-window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
+window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||null,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
 window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()}};
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
