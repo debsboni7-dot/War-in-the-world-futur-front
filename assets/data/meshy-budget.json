@@ -49,8 +49,11 @@
     {
       "asset": "ogo-player-character-v2",
       "credits": 30,
-      "status": "reserved",
-      "created_at": "2026-10-28T14:51:36.009Z"
+      "status": "completed",
+      "created_at": "2026-10-28T14:51:36.009Z",
+      "mesh_task_id": "01a182fe-d3da-71bd-90d5-0c5fe9f9415d",
+      "texture_task_id": "01a182ff-8bee-771d-b157-2d8df1625414",
+      "completed_at": "2026-10-28T14:52:58.422Z"
     }
   ],
   "future_reservation_credits": 30

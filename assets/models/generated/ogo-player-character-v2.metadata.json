@@ -1,0 +1,12 @@
+{
+  "name": "ogo-player-character-v2",
+  "prompt": "Create Ogo, the playable main character for a realistic futuristic military game: a clearly human adult male soldier, full body, realistic anatomy and proportions, visible head, torso, two separate arms with hands, two separate legs and boots. Dark olive/graphite combat armor with layered plates, fabric undersuit, straps, pouches, gloves, knee pads, subtle cyan lights, realistic worn metal, polymer and fabric PBR. Neutral A-pose, rig-friendly topology, centered origin, feet at ground level, facing forward. Must NOT be a cylinder, capsule, primitive, robot, drone, vehicle or floating torso. No weapon, no background, no text/logo. Game-ready UV-mapped GLB, optimized for mobile, PBR textured. Name: ogo-player-character-v2.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a182fe-d3da-71bd-90d5-0c5fe9f9415d",
+  "texture_task_id": "01a182ff-8bee-771d-b157-2d8df1625414",
+  "generated_at": "2026-10-28T14:52:58.421Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
