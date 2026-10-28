@@ -342,6 +342,10 @@ setTimeout(async()=>{
  await new Promise(r=>setTimeout(r,900));
  const robot=await loadWorldGLB('assets/models/textured/robot-combat-pbr-v2.glb',{x:-7,y:0,z:-7},2.1,'PBR combat robot');
  if(!robot&&!isLowMemoryPhone)await loadWorldFBX('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',{x:-7,y:0,z:-7},2.1,'combat robot fallback',10.1);
+ await new Promise(r=>setTimeout(r,900));
+ // Reuse the already-created fighter GLB from this repository; keep it away from the player at real-world scale.
+ const fighter=await loadWorldGLB('assets/models/generated/avion-chasse-futuriste.glb',{x:30,y:0,z:-72},12,'Meshy fighter aircraft');
+ if(!fighter)console.warn('Textured fighter unavailable; no untextured aircraft placeholder will be added.');
 },2600);
 
 // Additional repository assets are streamed as the player approaches their display points.
@@ -626,6 +630,34 @@ function playerModelVisibility(visible){
  if(gun)gun.visible=visible&&!weaponModel;
 }
 
+// Layered Web Audio SFX, created only after a user gesture (no downloaded audio or paid credits).
+let sfxContext=null,ambienceStarted=false;
+function startBattleAudio(){
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  if(!sfxContext)sfxContext=new AC();if(sfxContext.state==='suspended')sfxContext.resume();
+  if(ambienceStarted)return;ambienceStarted=true;
+  const ctx=sfxContext,noiseBuffer=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),data=noiseBuffer.getChannelData(0);
+  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.18;
+  const wind=ctx.createBufferSource();wind.buffer=noiseBuffer;wind.loop=true;
+  const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=420;
+  const gain=ctx.createGain();gain.gain.value=.045;wind.connect(filter);filter.connect(gain);gain.connect(ctx.destination);wind.start();
+ }catch(e){console.info('Battle audio unavailable:',e)}
+}
+function playGunshotSFX(){
+ try{
+  startBattleAudio();if(!sfxContext)return;const ctx=sfxContext,t=ctx.currentTime;
+  const buffer=ctx.createBuffer(1,Math.floor(ctx.sampleRate*.42),ctx.sampleRate),data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++){const decay=Math.exp(-i/(ctx.sampleRate*.075));data[i]=(Math.random()*2-1)*decay}
+  const shot=ctx.createBufferSource();shot.buffer=buffer;
+  const low=ctx.createBiquadFilter();low.type='lowpass';low.frequency.setValueAtTime(2400,t);low.frequency.exponentialRampToValueAtTime(180,t+.28);
+  const boom=ctx.createOscillator();boom.type='sine';boom.frequency.setValueAtTime(105,t);boom.frequency.exponentialRampToValueAtTime(38,t+.16);
+  const body=ctx.createGain();body.gain.setValueAtTime(.0001,t);body.gain.exponentialRampToValueAtTime(.72,t+.004);body.gain.exponentialRampToValueAtTime(.0001,t+.36);
+  const tail=ctx.createGain();tail.gain.setValueAtTime(.0001,t);tail.gain.exponentialRampToValueAtTime(.28,t+.008);tail.gain.exponentialRampToValueAtTime(.0001,t+.24);
+  shot.connect(low);low.connect(body);body.connect(ctx.destination);boom.connect(tail);tail.connect(ctx.destination);shot.start(t);shot.stop(t+.42);boom.start(t);boom.stop(t+.25);
+ }catch(e){console.info('Shot SFX unavailable:',e)}
+}
+
 // Reusable low-cost muzzle flash and pooled particles (no per-shot geometry allocation).
 const vfxGroup = new THREE.Group(); scene.add(vfxGroup);
 const flashMat = new THREE.MeshBasicMaterial({color:0xffd36a, transparent:true, opacity:0, depthWrite:false});
@@ -647,6 +679,7 @@ for (let i=0;i<18;i++) {
 }
 let vfxClock = 0;
 function triggerWeaponVFX(targetPoint=null) {
+  playGunshotSFX();
   const muzzle = new THREE.Vector3();
   if(weaponModel){
     weaponModel.updateWorldMatrix(true,false);
