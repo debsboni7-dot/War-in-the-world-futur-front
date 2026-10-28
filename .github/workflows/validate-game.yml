@@ -152,6 +152,7 @@ jobs:
             const bikeVisibleNear = await page.locator('#mountBike').evaluate(el => el.classList.contains('visible'));
             await page.locator('#mountBike').dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch',bubbles:true,cancelable:true});
             const mounted = await page.evaluate(() => window.__warPlayerTestState().ridingBike);
+            const playerVisibleWhileMounted = await page.evaluate(() => window.__warPlayerTestState().playerVisible);
             await page.locator('#mountBike').dispatchEvent('pointerdown',{pointerId:92,pointerType:'touch',bubbles:true,cancelable:true});
             const dismounted = !(await page.evaluate(() => window.__warPlayerTestState().ridingBike));
             await page.evaluate(() => window.__warInteractionTest.moveNearWeapon());
@@ -160,7 +161,7 @@ jobs:
             await page.locator('#pickupWeapon').dispatchEvent('pointerdown',{pointerId:93,pointerType:'touch',bubbles:true,cancelable:true});
             const ammoAfterPickup = await page.locator('#ammo').textContent();
             console.log(JSON.stringify({bikeVisibleNear,mounted,dismounted,pickupVisibleNear,ammoBeforePickup,ammoAfterPickup},null,2));
-            if(!bikeVisibleNear||!mounted||!dismounted) throw new Error('Motorcycle proximity/mount interaction failed');
+            if(!bikeVisibleNear||!mounted||!dismounted||!playerVisibleWhileMounted) throw new Error('Motorcycle proximity/mount/player-visibility interaction failed');
             if(!pickupVisibleNear||ammoAfterPickup===ammoBeforePickup) throw new Error('Weapon pickup interaction failed');
             if (mobileState.fps === '0') console.warn('WARNING: Chromium software-rendered FPS counter is 0; this is not a real-device FPS benchmark.');
             await browser.close();
