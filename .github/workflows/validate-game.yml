@@ -39,7 +39,7 @@ jobs:
             ['camera shoulder offset', /const shoulder=aiming\s*\?\s*1\.05\s*:\s*1\.2/],
             ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/],
             ['tree-free urban map', /Urban combat zone: no trees or forest vegetation in the city map/],
-            ['instanced outpost structures', /new THREE\.InstancedMesh\(new THREE\.BoxGeometry\(4,2\.5,3\)/],
+            ['solid city collisions', /for\\(const b of abandonedBuildings\\)[\\s\\S]*?for\\(const d of doorInteractables\\)/],
             ['adaptive render scale for 29 FPS target', /measuredFps<29[\s\S]*renderScale-.05/],
             ['reduced mobile render scale', /isLowMemoryPhone\?0\.55:0\.78/]
           ];
