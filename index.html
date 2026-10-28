@@ -547,7 +547,7 @@ loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',t
 });
 motorcycle=new THREE.Group();motorcycle.position.set(7,0,3);scene.add(motorcycle);
 const fallbackBike=makeMotorcycleFallback();motorcycle.add(fallbackBike);
-loadReusableGLB('assets/models/generated/moto-militaire-futuriste.glb',template=>{
+loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',template=>{
  motorcycle.remove(fallbackBike);const b=template.clone(true),bounds=new THREE.Box3().setFromObject(b),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  b.scale.setScalar(2.3/Math.max(.01,largest));b.position.set(-center.x*b.scale.x,-bounds.min.y*b.scale.y,-center.z*b.scale.z);motorcycle.add(b);bikeModelReady=true;
 });
