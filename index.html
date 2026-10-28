@@ -34,11 +34,12 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 const root=document.querySelector('#game'),message=document.querySelector('#message');
-function showFatalError(t){clearTimeout(showMessage.timer);message.textContent=t;message.style.display='block';message.style.zIndex='1000';message.style.background='#300d12f2';message.style.borderColor='#ff5268';message.style.maxWidth='min(92%,560px)'}
+let fatalErrorActive=false;
+function showFatalError(t){fatalErrorActive=true;clearTimeout(showMessage.timer);message.textContent=t;message.style.display='block';message.style.zIndex='1000';message.style.background='#300d12f2';message.style.borderColor='#ff5268';message.style.maxWidth='min(92%,560px)'}
 addEventListener('error',e=>{console.error('Game runtime error:',e.error||e.message);showFatalError('Erreur du jeu. Recharge la page ; si le problème persiste, vérifie la connexion et les modèles.')});
 addEventListener('unhandledrejection',e=>{console.error('Game startup error:',e.reason);showFatalError('Le jeu n’a pas pu démarrer. Vérifie la connexion Internet puis recharge la page.')});
 const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4) || innerWidth < 500;
-function showMessage(t){message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>message.style.display='none',2200)}
+function showMessage(t){if(fatalErrorActive)return;message.textContent=t;message.style.display='block';clearTimeout(showMessage.timer);showMessage.timer=setTimeout(()=>{if(!fatalErrorActive)message.style.display='none'},2200)}
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js')}catch(e){showMessage('3D engine could not load. Check your internet connection and reload.');throw e}
 let FBXLoader=null, GLTFLoader=null;
@@ -103,7 +104,7 @@ function reloadWeapon(){ammo=30;document.querySelector('#ammo').textContent=ammo
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
  ammo--;document.querySelector('#ammo').textContent=ammo+'/120';shots++;triggerWeaponVFX();
- const ray=new THREE.Raycaster();const shotOrigin=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
+ const ray=new THREE.Raycaster();ray.far=90;const shotOrigin=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
  if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
@@ -161,7 +162,7 @@ if(FBXLoader){
    });
    // Keep the readable fallback soldier visible until the imported model is visually confirmed on-device.
     // This prevents an invisible/incorrectly oriented FBX from making the player disappear.
-    placeholderParts.forEach(p=>p.visible=true);militaryModel=model;player.add(model);
+    placeholderParts.forEach(p=>p.visible=false);militaryModel=model;player.add(model);
    if(model.animations&&model.animations.length){militaryAnimations=model.animations;militaryMixer=new THREE.AnimationMixer(model);const preferred=model.animations.find(a=>/idle|stand|breath/i.test(a.name))||model.animations[0];militaryMixer.clipAction(preferred).play();console.info('Military character animation:',preferred.name)}
    else console.info('Military character loaded; no embedded animation clips found.');
    // If the model has a named right-hand bone, re-parent the weapon there after it loads.
@@ -183,8 +184,8 @@ function attachWeaponToHand(){
   weaponModel.position.set(.38,1.22,-.34);weaponModel.rotation.set(0,0,0);
   weaponAnchor='fallback hand position';
  }
- // Keep the fallback weapon visible as a safety net if the imported FBX is off-screen or malformed.
-  gun.visible=true;console.info('Weapon attached:',weaponAnchor);
+ // The fallback weapon is shown only if loading/attachment failed; avoid double weapons.
+  gun.visible=false;console.info('Weapon attached:',weaponAnchor);
 }
 // The tactical pump-action shotgun is the active weapon. Prefer its Meshy PBR GLB;
  // retain the existing rotary FBX only as a fallback if the textured GLB is unavailable.
@@ -422,7 +423,7 @@ const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
 function isBlocked(x,z){for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}return false}
-function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
+function animate(now){if(fatalErrorActive)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>0){player.position.y+=jumpVelocity*dt;jumpVelocity-=15*dt;if(player.position.y<=0){player.position.y=0;jumpVelocity=0}}const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
 
