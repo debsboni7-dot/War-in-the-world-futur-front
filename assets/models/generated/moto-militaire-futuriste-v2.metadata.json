@@ -1,0 +1,12 @@
+{
+  "name": "moto-militaire-futuriste-v2",
+  "prompt": "Create a realistic futuristic military motorcycle for a third-person sci-fi battlefield game. Full bike with two clearly visible circular wheels, frame, fork, handlebars, seat, foot pegs, compact armored fairings, headlamp and rear light; believable real-world motorcycle proportions and functional rider seating position. Weathered dark military paint, metal, rubber and glass PBR materials with UVs. Clean game-ready low-to-medium poly geometry, optimize for mobile real-time use, GLB output, no rider, no background, no text or logos. Name: moto-militaire-futuriste.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a182f9-249f-71e0-a6ad-503d878b4306",
+  "texture_task_id": "01a182f9-dd71-7441-9571-4a75b96e5a01",
+  "generated_at": "2026-10-28T14:47:31.860Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}

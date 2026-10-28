@@ -33,8 +33,11 @@
     {
       "asset": "moto-militaire-futuriste-v2",
       "credits": 30,
-      "status": "reserved",
-      "created_at": "2026-10-28T14:45:26.074Z"
+      "status": "completed",
+      "created_at": "2026-10-28T14:45:26.074Z",
+      "mesh_task_id": "01a182f9-249f-71e0-a6ad-503d878b4306",
+      "texture_task_id": "01a182f9-dd71-7441-9571-4a75b96e5a01",
+      "completed_at": "2026-10-28T14:47:31.861Z"
     }
   ],
   "future_reservation_credits": 30
