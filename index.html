@@ -225,8 +225,9 @@ function attachWeaponToHand(){
  }
  gun.visible=false;console.info('Weapon attached:',weaponAnchor);
 }
-// The tactical pump-action shotgun is the active weapon. Prefer its Meshy PBR GLB;
- // retain the existing rotary FBX only as a fallback if the textured GLB is unavailable.
+// Reuse the already-generated Meshy assault rifle (no new generation or credits).
+// Keep the older local shotgun/FBX as a fallback if the hosted GLB cannot load.
+const EXISTING_MESHY_RIFLE='https://d2ol7oe51mr4n9.cloudfront.net/user_3L8BH1pH0WyTHJdboyJ7rT3kcR8/5d6536a3-b093-4653-a92d-a8e80adf694c.glb';
 function prepareWeaponModel(model){
  try{
   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);if(mat.emissive){mat.emissive.set(0x10191d);mat.emissiveIntensity=.3}mat.needsUpdate=true})});
@@ -240,9 +241,9 @@ function loadFallbackWeapon(){
  if(weaponFallbackStarted||!FBXLoader)return;weaponFallbackStarted=true;
  new FBXLoader().load('assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',prepareWeaponModel,undefined,()=>{gun.visible=true});
 }
-// The textured GLB is 7+ MB; avoid loading it on constrained phones. Use the existing FBX instead.
-if(GLTFLoader&&!isLowMemoryPhone){
- new GLTFLoader().load('assets/models/textured/fusil-pompe-tactique-pbr-v2.glb',gltf=>prepareWeaponModel(gltf.scene),undefined,()=>loadFallbackWeapon());
+// The previously generated Meshy rifle is ~3.8 MB and is safe to try on phones too.
+if(GLTFLoader){
+ new GLTFLoader().load(EXISTING_MESHY_RIFLE,gltf=>prepareWeaponModel(gltf.scene),undefined,error=>{console.warn('Hosted Meshy rifle unavailable; trying local weapon.',error);loadFallbackWeapon()});
 }else loadFallbackWeapon();
 player.position.set(0,0,3);
 
@@ -549,6 +550,38 @@ function pumpReusableGLBQueue(){
  },undefined,e=>{console.warn('Optional generated GLB unavailable; visual fallback remains:',job.url,e);job.onError?.(e);reusableGLBBusy=false;pumpReusableGLBQueue()});
 }
 function loadReusableGLB(url,callback,onError){reusableGLBQueue.push({url,callback,onError});pumpReusableGLBQueue();}
+
+// Bring forward the already-created Meshy assets from the earlier build. These URLs are
+// existing assets: this code does not generate models or spend Meshy credits.
+const EXISTING_MESHY_HELICOPTER='https://d2ol7oe51mr4n9.cloudfront.net/user_3L8BH1pH0WyTHJdboyJ7rT3kcR8/c823139e-f9ba-4e5a-9d92-921d3b661742.glb';
+const EXISTING_MESHY_TREE='https://d2ol7oe51mr4n9.cloudfront.net/user_3L8BH1pH0WyTHJdboyJ7rT3kcR8/9c8006c1-38d5-4588-ace0-9678d0c7c5be.glb';
+function addExistingWorldGLB(url,x,z,targetSize,label,rotation=0){
+ loadReusableGLB(url,template=>{
+  const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
+  if(!Number.isFinite(largest)||largest<.001)throw new Error('Empty Meshy model: '+label);
+  const fit=targetSize/largest,model=template.clone(true);
+  model.scale.multiplyScalar(fit);model.position.set(x-center.x*fit,-bounds.min.y*fit,z-center.z*fit);model.rotation.y=rotation;
+  model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();}});
+  scene.add(model);streamedModels.push({model,label,position:new THREE.Vector3(x,0,z)});
+  console.info('Existing Meshy asset loaded into Future Front:',label);
+ },error=>console.warn('Existing Meshy asset not available; scene fallback retained:',label,error));
+}
+// Helicopter parked on the outer edge of the combat zone.
+addExistingWorldGLB(EXISTING_MESHY_HELICOPTER,25,-44,10,'Meshy helicopter',Math.PI*.5);
+// The previously generated tree is reused at three perimeter locations, away from the main road.
+function addExistingTreeCopies(){
+ loadReusableGLB(EXISTING_MESHY_TREE,template=>{
+  for(const [x,z,rot] of [[25,-14,.2],[27,-29,1.1],[27,-64,2.2]]){
+   const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z),fit=4.5/Math.max(.001,largest),model=template.clone(true);
+   model.scale.multiplyScalar(fit);model.position.set(x-center.x*fit,-bounds.min.y*fit,z-center.z*fit);model.rotation.y=rot;
+   model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();}});
+   scene.add(model);streamedModels.push({model,label:'Meshy tree',position:new THREE.Vector3(x,0,z)});
+  }
+  console.info('Existing Meshy tree reused at three perimeter positions');
+ },error=>console.warn('Existing Meshy tree unavailable; city remains playable.',error));
+}
+addExistingTreeCopies();
+
 // Load the Meshy abandoned building once and reuse the same geometry at several map locations.
 loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template=>{
  abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;fallbackRubble.forEach(m=>scene.remove(m));fallbackRubble.length=0;meshyBuildingLoadSucceeded=true;abandonedBuildingModelReady=true;
