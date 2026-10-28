@@ -1,7 +1,7 @@
 {
   "budget_limit_credits": 200,
-  "reserved_credits": 140,
-  "available_credits": 60,
+  "reserved_credits": 170,
+  "available_credits": 30,
   "policy": "Hard cap for this authorized Meshy budget. Current completed Meshy 6 Lite asset is conservatively recorded at 20 credits (5 mesh + 15 texture per current API pricing). Every future generation reserves 30 credits before submitting (20 expected + 10 safety margin). Do not start if the reservation would exceed 200. Failed/refunded tasks remain reserved conservatively unless reconciled from Meshy usage records.",
   "reservations": [
     {
@@ -54,6 +54,13 @@
       "mesh_task_id": "01a182fe-d3da-71bd-90d5-0c5fe9f9415d",
       "texture_task_id": "01a182ff-8bee-771d-b157-2d8df1625414",
       "completed_at": "2026-10-28T14:52:58.422Z"
+    },
+    {
+      "asset": "ogo-player-character-rigged-animated",
+      "credits": 30,
+      "status": "reserved",
+      "created_at": "2026-10-28T15:26:36.248Z",
+      "note": "Meshy humanoid rigging plus up to eight compatible animation clips; reserved before API calls."
     }
   ],
   "future_reservation_credits": 30
