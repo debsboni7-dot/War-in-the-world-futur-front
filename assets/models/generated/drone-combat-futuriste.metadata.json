@@ -1,6 +1,6 @@
 {
   "name": "drone-combat-futuriste",
-  "prompt": "Recovered completed Meshy task; original prompt was recorded in issue history.",
+  "prompt": "Create a compact, realistic near-future military combat drone for War in the World: Future Front. Single autonomous hovering quad-rotor reconnaissance/attack drone, angular graphite and matte-black armored shell, four short protected rotor arms with visible rotors, one small red sensor lens, restrained cyan status lights, realistic PBR metal and polymer, subtle wear, believable engineering, clean silhouette readable at gameplay distance. No weapons dangling, no stand, no text, no logo, no background, no cartoon style. Game-ready single GLB asset, centered origin, ground/hover clearance, optimized geometry, target about 20k polygons or fewer, 1K textures, mobile-friendly.",
   "provider": "Meshy API",
   "model": "meshy-6-lite",
   "format": "glb",
@@ -8,5 +8,6 @@
   "mesh_task_id": "01a182ad-4cfa-73ec-bc0f-923b4531e4a5",
   "texture_task_id": "01a182ae-087f-712b-b0f0-6022a76d5ca4",
   "generated_at": "2026-10-28T13:26:31.133Z",
-  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+  "note": "Generated and textured successfully with Meshy 6 Lite API. Budget accounting conservatively reserves 20 credits. Visual quality and on-device performance still require browser/device verification.",
+  "credits_reserved": 20
 }
