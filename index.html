@@ -200,7 +200,7 @@ if(FBXLoader){
     if(!o.isMesh)return;o.frustumCulled=true;
     if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
     const mats=Array.isArray(o.material)?o.material:[o.material];
-    mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.runtimeFallbackTexture=true}mat.roughness=Math.max(.48,mat.roughness??.75);mat.needsUpdate=true});
+    mats.forEach(mat=>{if(!mat)return;mat.userData=mat.userData||{};if(!mat.map){mat.userData.runtimeFallbackTexture=true;if(mat.color&&mat.color.getHex()===0xffffff)mat.color.set(0x6b7c83);mat.metalness=Math.min(mat.metalness??0,.18)}mat.roughness=Math.max(.68,mat.roughness??.75);mat.needsUpdate=true});
    });
    // Keep the readable fallback soldier visible until the imported model is visually confirmed on-device.
     // This prevents an invisible/incorrectly oriented FBX from making the player disappear.
@@ -209,7 +209,7 @@ if(FBXLoader){
    else console.info('Military character loaded; no embedded animation clips found.');
    // If the model has a named right-hand bone, re-parent the weapon there after it loads.
    if(weaponModel){attachWeaponToHand();}
-   showMessage('Military character loaded');
+   showMessage('Ogo chargé · personnage 3D actif');
   }catch(e){console.warn('Military character could not be prepared; placeholder retained.',e);model.parent?.remove(model)}
  },undefined,e=>{console.error('Military FBX failed; refusing cylindrical/primitive player fallback.',e);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo indisponible : recharge après vérification du réseau')});
 }
