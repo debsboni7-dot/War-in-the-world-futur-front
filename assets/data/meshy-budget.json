@@ -1,7 +1,7 @@
 {
   "budget_limit_credits": 200,
-  "reserved_credits": 80,
-  "available_credits": 120,
+  "reserved_credits": 110,
+  "available_credits": 90,
   "policy": "Hard cap for this authorized Meshy budget. Current completed Meshy 6 Lite asset is conservatively recorded at 20 credits (5 mesh + 15 texture per current API pricing). Every future generation reserves 30 credits before submitting (20 expected + 10 safety margin). Do not start if the reservation would exceed 200. Failed/refunded tasks remain reserved conservatively unless reconciled from Meshy usage records.",
   "reservations": [
     {
@@ -29,6 +29,12 @@
       "mesh_task_id": "01a182f6-754a-74cb-b0c7-7ee5cebb9872",
       "texture_task_id": "01a182f7-30c8-769b-8ac2-0ca22cd5c083",
       "completed_at": "2026-10-28T14:44:05.957Z"
+    },
+    {
+      "asset": "moto-militaire-futuriste-v2",
+      "credits": 30,
+      "status": "reserved",
+      "created_at": "2026-10-28T14:45:26.074Z"
     }
   ],
   "future_reservation_credits": 30
