@@ -140,6 +140,21 @@ const textureResolution=isLowMemoryPhone?'2k':'4k';
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/'+textureResolution+'/gravel_embedded_concrete/gravel_embedded_concrete_diff_'+textureResolution+'.jpg',24,'ground');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/'+textureResolution+'/concrete_floor/concrete_floor_diff_'+textureResolution+'.jpg',2,'concrete');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/'+textureResolution+'/rusty_painted_metal/rusty_painted_metal_diff_'+textureResolution+'.jpg',2,'metal');
+function loadPhotoPBRMap(asset,mapSuffix,repeat,kind,mapKey){
+ const loader=new THREE.TextureLoader();loader.setCrossOrigin('anonymous');
+ const url='https://dl.polyhaven.org/file/ph-assets/Textures/jpg/'+textureResolution+'/'+asset+'/'+asset+'_'+mapSuffix+'_'+textureResolution+'.jpg';
+ loader.load(url,tex=>{
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(repeat,repeat);tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  if(mapKey==='map')tex.colorSpace=THREE.SRGBColorSpace;
+  scene.traverse(obj=>{if(!obj.isMesh||!obj.material)return;const mats=Array.isArray(obj.material)?obj.material:[obj.material];for(const mat of mats){if(mat?.userData?.photoKind===kind){mat[mapKey]=tex;if(mapKey==='normalMap')mat.normalScale.set(.7,.7);mat.needsUpdate=true}}});
+ },undefined,err=>console.warn('PBR map unavailable; retaining existing material:',asset,mapSuffix));
+}
+loadPhotoPBRMap('gravel_embedded_concrete','nor_gl',24,'ground','normalMap');
+loadPhotoPBRMap('gravel_embedded_concrete','rough',24,'ground','roughnessMap');
+loadPhotoPBRMap('concrete_floor','nor_gl',2,'concrete','normalMap');
+loadPhotoPBRMap('concrete_floor','rough',2,'concrete','roughnessMap');
+loadPhotoPBRMap('rusty_painted_metal','nor_gl',2,'metal','normalMap');
+loadPhotoPBRMap('rusty_painted_metal','rough',2,'metal','roughnessMap');
 // Batch repeated outpost pieces into four instanced draw calls instead of 36 separate meshes.
 const outpostConcrete=new THREE.InstancedMesh(new THREE.BoxGeometry(4,2.5,3),new THREE.MeshStandardMaterial({color:0xffffff,map:concreteTex,roughness:.9}),9);
 const outpostRoof=new THREE.InstancedMesh(new THREE.BoxGeometry(4.2,.25,3.2),new THREE.MeshStandardMaterial({color:0xffffff,map:metalTex,roughness:.68,metalness:.35}),9);
