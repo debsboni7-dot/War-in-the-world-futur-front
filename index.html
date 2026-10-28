@@ -624,7 +624,8 @@ function applyRenderScale(){renderer.setPixelRatio(Math.min(devicePixelRatio||1,
 addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&!e.repeat)reloadWeapon()});
 function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
-window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
+window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
+window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()}};
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
