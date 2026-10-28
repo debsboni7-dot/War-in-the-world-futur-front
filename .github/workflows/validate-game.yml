@@ -45,7 +45,7 @@ jobs:
           ];
           for (const [label, pattern] of requiredCameraRules) if (!pattern.test(html)) throw new Error('Camera/gameplay regression: ' + label);
           console.log('Verified independent player facing, shoulder camera, and crosshair-aligned shots.');
-          const optionalGenerated = new Set(['assets/models/generated/segment-route-asphalte-abimee-v2.glb','assets/models/generated/moto-militaire-futuriste-v2.glb']);
+          const optionalGenerated = new Set(['assets/models/generated/segment-route-asphalte-abimee-v2.glb','assets/models/generated/moto-militaire-futuriste-v2.glb','assets/models/generated/ogo-player-character.glb']);
           const missing = [...new Set(refs)].filter(path => !fs.existsSync(path) && !optionalGenerated.has(path));
           if (missing.length) throw new Error('Missing model files:\n' + missing.join('\n'));
           console.log('JavaScript module extracted. Verified ' + (new Set(refs).size-missing.length) + ' present model paths; optional Meshy models have procedural fallbacks.');
