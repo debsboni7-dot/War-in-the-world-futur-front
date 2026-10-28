@@ -192,6 +192,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
 }
+function addPlayerAnimationClips(clips=[]){if(!militaryModel||!clips.length)return;militaryAnimations.push(...clips);if(!militaryMixer)militaryMixer=new THREE.AnimationMixer(militaryModel);for(const clip of clips){if(/idle|stand|breath|walk|run|sprint|jump|shoot|fire|attack|reload|mount|dismount|ride|motorcycle|drive|sit/i.test(clip.name))playerActions[clip.name]=militaryMixer.clipAction(clip)}console.info('Meshy animation clips added:',clips.map(c=>c.name))}
 function loadLegacyPlayer(){
  if(!FBXLoader){showMessage('Modèle Ogo indisponible : vérifie la connexion');return}
  new FBXLoader().load('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',model=>acceptPlayerModel(model,model.animations||[],'legacy FBX fallback'),undefined,e=>{console.error('Legacy player model failed:',e);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo indisponible : vérifie la connexion')});
@@ -200,11 +201,10 @@ if(GLTFLoader){
  const playerLoader=new GLTFLoader();
  const loadOriginalOgo=()=>playerLoader.load('assets/models/generated/ogo-player-character-v2.glb',gltf=>acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo GLB'),undefined,e=>{console.warn('Generated Ogo GLB unavailable; trying existing compatibility model.',e);loadLegacyPlayer()});
  playerLoader.load('assets/models/generated/ogo-player-character-rigged-animated.glb',gltf=>{
-  const clips=[...(gltf.animations||[])];
-  const animationFiles=['assets/models/generated/ogo-walking-meshy.glb','assets/models/generated/ogo-running-meshy.glb'];
-  let animationIndex=0;
-  const finish=()=>{if(clips.length)acceptPlayerModel(gltf.scene,clips,'Meshy Ogo Rigged+Animated GLB');else{console.warn('Rigged Ogo has no usable animation clips; loading base character.');loadOriginalOgo()}};
-  const loadNextAnimation=()=>{if(animationIndex>=animationFiles.length){finish();return}const url=animationFiles[animationIndex++];playerLoader.load(url,animGltf=>{clips.push(...(animGltf.animations||[]));loadNextAnimation()},undefined,()=>loadNextAnimation())};
+  acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo Rigged+Animated GLB');
+  // Show the rigged character immediately; stream animation-only data sequentially to avoid blocking startup on mobile.
+  const animationFiles=['assets/models/generated/ogo-walking-meshy.glb','assets/models/generated/ogo-running-meshy.glb'];let animationIndex=0;
+  const loadNextAnimation=()=>{if(animationIndex>=animationFiles.length)return;const url=animationFiles[animationIndex++];playerLoader.load(url,animGltf=>{addPlayerAnimationClips(animGltf.animations||[]);loadNextAnimation()},undefined,()=>loadNextAnimation())};
   loadNextAnimation();
  },undefined,e=>{console.info('Rigged Meshy model not published yet; loading base Ogo.',e);loadOriginalOgo()});
 }else loadLegacyPlayer();
