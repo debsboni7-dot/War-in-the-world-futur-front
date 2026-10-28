@@ -437,7 +437,7 @@ document.querySelector('#aim').addEventListener('click',()=>{aiming=!aiming;came
 document.querySelector('#jump').addEventListener('pointerdown',e=>{e.preventDefault();if(player.position.y<=.015){jumpVelocity=6.2;showMessage('Saut')}});
 document.querySelector('#reload').addEventListener('pointerdown',e=>{e.preventDefault();reloadWeapon()});
 document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shootHostile()});
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.7:0.9));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
 addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&!e.repeat)reloadWeapon()});
 function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
