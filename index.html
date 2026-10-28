@@ -171,7 +171,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   const maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid player model bounds');
   const height=Math.max(size.y,.001),scale=1.85/height;
-  model.scale.setScalar(scale);
+  model.scale.multiplyScalar(scale);
   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
   model.traverse(o=>{
    if(!o.isMesh)return;o.frustumCulled=true;
@@ -230,7 +230,7 @@ function prepareWeaponModel(model){
   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);mat.needsUpdate=true})});
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
-  model.scale.setScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();gun.visible=false;
+  model.scale.multiplyScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();gun.visible=false;
  }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
 let weaponFallbackStarted=false;
@@ -263,8 +263,8 @@ function loadWorldFBX(url, position, targetSize, label, maxBytesHint) {
         const center = bounds.getCenter(new THREE.Vector3());
         const largest = Math.max(size.x, size.y, size.z);
         if (!Number.isFinite(largest) || largest < 0.001) return resolve(null);
-        model.scale.setScalar(targetSize / largest);
-        model.position.set(position.x-center.x*model.scale.x, position.y-bounds.min.y*model.scale.y, position.z-center.z*model.scale.z);
+        const fitScale=targetSize/largest;model.scale.multiplyScalar(fitScale);
+        model.position.set(position.x-center.x*fitScale, position.y-bounds.min.y*fitScale, position.z-center.z*fitScale);
         model.traverse(o => {
           if (!o.isMesh) return;
           o.frustumCulled = true;
@@ -298,8 +298,8 @@ function loadWorldGLB(url, position, targetSize, label){
    try{
     const model=gltf.scene,bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
     if(!Number.isFinite(largest)||largest<.001)throw new Error('Invalid GLB bounds');
-    model.scale.setScalar(targetSize/largest);
-    model.position.set(position.x-center.x*model.scale.x,position.y-bounds.min.y*model.scale.y,position.z-center.z*model.scale.z);
+    const fitScale=targetSize/largest;model.scale.multiplyScalar(fitScale);
+    model.position.set(position.x-center.x*fitScale,position.y-bounds.min.y*fitScale,position.z-center.z*fitScale);
     model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();}});
     scene.add(model);streamedModels.push({model,label,position:new THREE.Vector3(position.x,position.y,position.z)});console.info('Loaded textured PBR GLB:',label);resolve(model);
    }catch(e){console.warn('Textured GLB invalid:',label,e);resolve(null)}
@@ -313,7 +313,7 @@ function applyEnemyDrone(template){
   try{
    const visual=template.clone(true),bounds=new THREE.Box3().setFromObject(visual),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
    if(!Number.isFinite(largest)||largest<.001)throw new Error('Invalid drone model bounds');
-   const scale=1.45/largest;visual.scale.setScalar(scale);
+   const scale=1.45/largest;visual.scale.multiplyScalar(scale);
    visual.position.set(-center.x*scale,.82-bounds.min.y*scale,-center.z*scale);
    visual.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});
    enemy.add(visual);enemy.userData.droneVisual=visual;enemy.userData.droneBaseY=visual.position.y;
@@ -409,8 +409,8 @@ function loadGalleryAsset(asset){
    try{
     const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
     if(!Number.isFinite(largest)||largest<.001)throw new Error('Empty model bounds');
-    model.scale.setScalar(asset.size/largest);
-    model.position.set(asset.x-center.x*model.scale.x,.04-bounds.min.y*model.scale.y,asset.z-center.z*model.scale.z);
+    const fitScale=asset.size/largest;model.scale.multiplyScalar(fitScale);
+    model.position.set(asset.x-center.x*fitScale,.04-bounds.min.y*fitScale,asset.z-center.z*fitScale);
     model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(mat&&!mat.map){mat.map=metalTex;mat.userData=mat.userData||{};mat.userData.runtimeFallback=true}if(mat){mat.roughness=Math.max(.5,mat.roughness??.75);mat.needsUpdate=true}})}});
     model.userData.galleryAssetId=asset.id;scene.add(model);asset.loaded=model;asset.failed=false;asset.nextTry=performance.now()+20000;
     console.info('Gallery model loaded:',asset.label);resolve(model);
@@ -505,7 +505,7 @@ function makeMotorcycleFallback(){
  return g;
 }
 function placeWorldModel(template,x,z,scale,rotation=0){
- const m=template.clone(true);m.position.set(x,0,z);m.rotation.y=rotation;m.scale.setScalar(scale);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);return m;
+ const m=template.clone(true);m.position.set(x,0,z);m.rotation.y=rotation;m.scale.multiplyScalar(scale);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);return m;
 }
 const reusableGLBQueue=[];let reusableGLBBusy=false;
 function pumpReusableGLBQueue(){
@@ -533,7 +533,7 @@ loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',t
  const alongX=size.x>size.z,segLength=Math.max(size.x,size.z),targetLength=10;
  const scale=targetLength/Math.max(.01,segLength);
  for(let i=0;i<8;i++){
-  const m=template.clone(true);m.scale.setScalar(scale);if(alongX)m.rotation.y=Math.PI/2;
+  const m=template.clone(true);m.scale.multiplyScalar(scale);if(alongX)m.rotation.y=Math.PI/2;
   m.position.set(0,.02,-8-i*10);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);roadSegments.push(m);
  }
 },()=>{roadSegments.forEach(m=>m.visible=true)});
@@ -541,7 +541,7 @@ motorcycle=new THREE.Group();motorcycle.position.set(7,0,3);scene.add(motorcycle
 const fallbackBike=makeMotorcycleFallback();fallbackBike.visible=false;motorcycle.add(fallbackBike);
 loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',template=>{
  motorcycle.remove(fallbackBike);const b=template.clone(true),bounds=new THREE.Box3().setFromObject(b),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
- b.scale.setScalar(2.3/Math.max(.01,largest));b.position.set(-center.x*b.scale.x,-bounds.min.y*b.scale.y,-center.z*b.scale.z);motorcycle.add(b);bikeModelReady=true;
+ const fitScale=2.3/Math.max(.01,largest);b.scale.multiplyScalar(fitScale);b.position.set(-center.x*fitScale,-bounds.min.y*fitScale,-center.z*fitScale);motorcycle.add(b);bikeModelReady=true;
 },()=>{fallbackBike.visible=true});
 weaponPickup=new THREE.Group();weaponPickup.position.set(4.2,0,2.5);scene.add(weaponPickup);
 const pickupGlow=new THREE.Mesh(new THREE.TorusGeometry(.42,.055,6,18),new THREE.MeshBasicMaterial({color:0x6cf7ff}));
@@ -549,7 +549,7 @@ pickupGlow.rotation.x=Math.PI/2;pickupGlow.position.y=.06;weaponPickup.add(picku
 const pickupFallback=new THREE.Mesh(new THREE.BoxGeometry(.18,.15,.9),new THREE.MeshStandardMaterial({color:0x26343b,metalness:.65,roughness:.4}));pickupFallback.position.y=.35;pickupFallback.rotation.y=-.35;pickupFallback.visible=false;weaponPickup.add(pickupFallback);
 loadReusableGLB('assets/models/generated/railgun-electromagnetique.glb',template=>{
  weaponPickup.remove(pickupFallback);const m=template.clone(true),bounds=new THREE.Box3().setFromObject(m),size=bounds.getSize(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
- m.scale.setScalar(.9/Math.max(.01,largest));m.position.y=.25;weaponPickup.add(m);
+ m.scale.multiplyScalar(.9/Math.max(.01,largest));m.position.y=.25;weaponPickup.add(m);
 },()=>{pickupFallback.visible=true});
 function closestDoor(){let best=null,bestD=Infinity;for(const d of doorInteractables){const dx=player.position.x-d.x,dz=player.position.z-d.z,dist=Math.hypot(dx,dz);if(dist<bestD){best=d;bestD=dist}}return best&&bestD<3.4?best:null}
 function updateContextActions(){
