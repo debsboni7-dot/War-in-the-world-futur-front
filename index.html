@@ -26,11 +26,11 @@
  </div>
  <div class="bottom">
   <div id="stick" aria-label="Movement joystick"><div id="knob"></div></div>
-  <div class="hint">Move with the joystick. Drag the open screen to look around. Tap FIRE to shoot hostile drones. Press R to reload.</div>
+  <div class="hint">Ville de combat : joystick pour bouger, glisse l’écran pour regarder. TIRE pour éliminer les drones. Approche-toi des portes, armes et motos pour interagir.</div>
   <div class="controls"><button class="btn" id="aim" aria-label="Aim">AIM</button><button class="btn" id="fire" aria-label="Shoot">TIRER</button><button class="btn" id="jump" aria-label="Jump">SAUTER</button><button class="btn" id="run" aria-label="Sprint">COURIR</button><button class="btn" id="reload" aria-label="Reload">RECHARGER</button></div>
  </div>
 </div>
-<div class="context-actions"><button class="context-btn" id="pickupWeapon">RAMASSER ARME</button><button class="context-btn" id="mountBike">MONTER SUR LA MOTO</button></div>
+<div class="context-actions"><button class="context-btn" id="interactWorld">OUVRIR LA PORTE</button><button class="context-btn" id="pickupWeapon">RAMASSER ARME</button><button class="context-btn" id="mountBike">MONTER SUR LA MOTO</button></div>
 <div id="message"></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
@@ -81,26 +81,7 @@ function loadPhotoTexture(url,repeat,kind){
 const groundMat=new THREE.MeshStandardMaterial({map:groundTex,color:0xffffff,roughness:1});groundMat.userData.photoKind='ground';const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,1,1),groundMat);ground.rotation.x=-Math.PI/2;ground.position.y=-.08;scene.add(ground);
 // Debug grid removed for a cleaner continuous battlefield terrain.
 function box(w,h,d,color,x,y,z,texture=null){const mat=new THREE.MeshStandardMaterial({color,map:texture,roughness:texture===metalTex ? .68 : .9,metalness:texture===metalTex ? .35 : 0});if(texture===concreteTex)mat.userData.photoKind='concrete';if(texture===metalTex)mat.userData.photoKind='metal';const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);scene.add(m);return m}
-// Instanced vegetation: two draw calls for the whole forest instead of one per tree part.
-const treeCount=isLowMemoryPhone?28:56;
-const treeTrunkGeometry=new THREE.BoxGeometry(.35,2,.35);
-const treeCrownGeometry=new THREE.ConeGeometry(1.25,3,6);
-const treeTrunkMaterial=new THREE.MeshStandardMaterial({color:0xffffff,map:barkTex,roughness:1});
-const treeCrownMaterial=new THREE.MeshStandardMaterial({color:0xffffff,map:foliageTex,roughness:1});
-const treeTrunks=new THREE.InstancedMesh(treeTrunkGeometry,treeTrunkMaterial,treeCount);
-const treeCrowns=new THREE.InstancedMesh(treeCrownGeometry,treeCrownMaterial,treeCount);
-treeTrunks.frustumCulled=false;treeCrowns.frustumCulled=false;
-const treeTransform=new THREE.Object3D();
-let placedTrees=0;
-for(let i=0;i<treeCount*3&&placedTrees<treeCount;i++){
- const a=Math.random()*Math.PI*2,r=13+Math.random()*65,x=Math.cos(a)*r,z=Math.sin(a)*r;
- if(Math.abs(x)<7&&Math.abs(z)<9)continue;
- const scale=.65+Math.random()*.85;
- treeTransform.position.set(x,scale,z);treeTransform.rotation.set(0,0,0);treeTransform.scale.setScalar(scale);treeTransform.updateMatrix();treeTrunks.setMatrixAt(placedTrees,treeTransform.matrix);
- treeTransform.position.set(x,2.6*scale,z);treeTransform.scale.setScalar(scale);treeTransform.updateMatrix();treeCrowns.setMatrixAt(placedTrees,treeTransform.matrix);
- placedTrees++;
-}
-treeTrunks.count=placedTrees;treeCrowns.count=placedTrees;scene.add(treeTrunks,treeCrowns);
+// Urban combat zone: no trees or forest vegetation in the city map.
 // Mobile-friendly sci-fi hostiles with hit points and simple pursuit behavior.
 const enemies=[];
 const enemyMetal=new THREE.MeshStandardMaterial({color:0x34414a,metalness:.7,roughness:.38});
@@ -123,10 +104,11 @@ function updateAmmoDisplay(){document.querySelector('#ammo').textContent=ammo+'/
 function reloadWeapon(){if(ammo>=30){showMessage('Chargeur déjà plein');return}if(reserveAmmo<=0){showMessage('Plus de munitions');return}const loaded=Math.min(30-ammo,reserveAmmo);ammo+=loaded;reserveAmmo-=loaded;updateAmmoDisplay();showMessage('Rechargé : +'+loaded)}
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
- ammo--;updateAmmoDisplay();shots++;triggerWeaponVFX();
+ ammo--;updateAmmoDisplay();shots++;
  const ray=new THREE.Raycaster();ray.far=90;ray.setFromCamera(new THREE.Vector2(0,0),camera);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
+ triggerWeaponVFX(hit?hit.point:ray.ray.origin.clone().addScaledVector(ray.ray.direction,22));
  if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
   if(enemies.includes(target)){const d=target.userData;d.health=Math.max(0,d.health-34);d.flash=.13;const fill=d.hp.userData.fill;fill.scale.x=Math.max(.001,d.health/d.maxHealth);fill.position.x=-(1-d.health/d.maxHealth)*.48;
    if(d.health<=0){d.dead=true;target.visible=false;updateEnemyCounter();showMessage('CIBLE NEUTRALISÉE')}else showMessage('IMPACT CONFIRMÉ')}
@@ -178,9 +160,13 @@ placeholderParts.push(part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0));
 const gun=new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));
 gun.position.set(.58,1.25,-.45);player.add(gun);
 let militaryModel=null, militaryMixer=null, militaryAnimations=[], weaponModel=null, weaponAnchor=null;
+let playerActions={},currentPlayerAction='',playerActionTimer=0,playerRigBones={},playerRigRest=new Map(),mountTransition=0,mountTransitionType='';
+function findRigBones(model){const found={};model.traverse(o=>{if(!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z0-9]/g,'');const tests={hips:/^(hips|pelvis|mixamorig:hips|bip001pelvis)/,spine:/spine|chest/,rightArm:/(rightarm|armr|mixamorig.*rightarm|bip001rupperarm)/,leftArm:/(leftarm|arml|mixamorig.*leftarm|bip001lupperarm)/,rightForearm:/(rightforearm|forearmr|mixamorig.*rightforearm|bip001rforearm)/,leftForearm:/(leftforearm|forearml|mixamorig.*leftforearm|bip001lforearm)/,rightThigh:/(rightupleg|rightthigh|thighr|mixamorig.*rightupleg|bip001rthigh)/,leftThigh:/(leftupleg|leftthigh|thighl|mixamorig.*leftupleg|bip001lthigh)/,rightLeg:/(rightleg|rightcalf|calfr|mixamorig.*rightleg|bip001rcalf)/,leftLeg:/(leftleg|leftcalf|calfl|mixamorig.*leftleg|bip001lcalf)/};for(const [k,re] of Object.entries(tests))if(!found[k]&&re.test(n))found[k]=o});playerRigBones=found;playerRigRest=new Map(Object.values(found).map(b=>[b,{x:b.rotation.x,y:b.rotation.y,z:b.rotation.z}]));}
+function choosePlayerAction(type){const patterns={idle:/idle|stand|breath/i,walk:/walk|walking/i,run:/run|sprint|jog/i,jump:/jump|leap/i,fire:/shoot|fire|attack|rifle|aim/i,reload:/reload/i,mount:/mount|get.?on|enter.?vehicle|bike.?on/i,dismount:/dismount|get.?off|exit.?vehicle|bike.?off/i,ride:/ride|motorcycle|drive|sit/i};const clip=militaryAnimations.find(a=>patterns[type]?.test(a.name));if(!clip||!militaryMixer)return false;if(currentPlayerAction===clip.name)return true;const next=militaryMixer.clipAction(clip);next.reset().play();const prev=playerActions[currentPlayerAction];if(prev)next.crossFadeFrom(prev,.16,true);playerActions[clip.name]=next;currentPlayerAction=clip.name;return true;}
+function setMountTransition(type){mountTransition=.72;mountTransitionType=type;choosePlayerAction(type);}
 function findRightHand(rootModel){
  let found=null;
- rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[ _.-]/g,'');if(['righthand','handr','mixamorigrighthand','bip01rhand','rightwrist','handright'].includes(n)||(/right/.test(n)&&/hand/.test(n)))found=o});
+ rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z0-9]/g,'');if(['righthand','handr','mixamorig:righthand','bip01rhand','rightwrist','handright','mixamoriglefthand'].includes(n)||(/right/.test(n)&&(/hand/.test(n)||/wrist/.test(n))))found=o});
  return found;
 }
 // Prefer the purpose-built human Ogo GLB; the old FBX is only a temporary compatibility fallback.
@@ -201,9 +187,10 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   if(militaryModel)player.remove(militaryModel);
   militaryModel=model;militaryAnimations=animations||[];militaryMixer=null;player.add(model);
   placeholderParts.forEach(p=>p.visible=false);
-  if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);const preferred=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name))||militaryAnimations[0];militaryMixer.clipAction(preferred).play();console.info('Player animation:',preferred.name)}
+  if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);for(const clip of militaryAnimations){if(/idle|stand|breath|walk|run|sprint|jump|shoot|fire|attack|reload|mount|dismount|ride|motorcycle|drive|sit/i.test(clip.name))playerActions[clip.name]=militaryMixer.clipAction(clip)}const idle=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name));if(idle){playerActions[idle.name].play();currentPlayerAction=idle.name;console.info('Compatible idle animation:',idle.name)}}findRigBones(model);
   if(weaponModel)attachWeaponToHand();
   window.__warPlayerModelSource=source;
+ window.__warPlayerTestState=()=>({modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,hasRigBones:Object.keys(playerRigBones).length,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor});
   console.info('Playable character model loaded:',source);
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
@@ -351,31 +338,7 @@ setTimeout(async()=>{
 // Additional repository assets are streamed as the player approaches their display points.
 // Only one gallery model is resident at a time, so the full asset library can be used on phones
 // without downloading and decoding every large FBX/GLB at startup.
-const galleryAssets = [
- {id:'pulse-rifle',label:'Pulse rifle',url:'assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_pulse_20261025_generate.fbx',format:'fbx',size:2.1,x:-22,z:12},
- {id:'thermal-weapon',label:'Thermal weapon',url:'assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_thermal_20261025_generate.fbx',format:'fbx',size:2.1,x:-22,z:3},
- {id:'combat-knife',label:'Combat knife',url:'assets/models/generated/couteau-combat.glb',format:'glb',size:1.0,x:-15,z:16},
- {id:'railgun',label:'Electromagnetic railgun',url:'assets/models/generated/railgun-electromagnetique.glb',format:'glb',size:2.4,x:-7,z:17},
- {id:'rotary-cannon',label:'Rotary cannon',url:'assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',format:'fbx',size:2.3,x:2,z:17},
- {id:'energy-pistol',label:'Energy pistol',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_energy_pistol_for_a_20261025_generate.fbx',format:'fbx',size:1.1,x:11,z:16},
- {id:'heavy-machine-gun',label:'Heavy machine gun',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_heavy_machine_gun_20261025_generate.fbx',format:'fbx',size:2.2,x:20,z:12},
- {id:'laser-rifle',label:'Laser rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_laser_rifle_with_20261025_generate.fbx',format:'fbx',size:2.0,x:28,z:6},
- {id:'assault-rifle',label:'Military assault rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_military_assault_20261025_generate.fbx',format:'fbx',size:2.0,x:31,z:-4},
- {id:'sniper-rifle',label:'Military sniper rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_military_sniper_20261025_generate.fbx',format:'fbx',size:2.2,x:28,z:-14},
- {id:'animated-weapon-a',label:'Animated weapon prototype A',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations.glb',format:'glb',size:2.0,x:20,z:-23},
- {id:'animated-weapon-b',label:'Animated weapon prototype B',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations (1).glb',format:'glb',size:2.0,x:10,z:-31},
- {id:'weapon-texture-a',label:'Futuristic weapon prototype A',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027063641_texture.glb',format:'glb',size:2.0,x:0,z:-37},
- {id:'weapon-texture-b',label:'Futuristic weapon prototype B',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027064817_texture.glb',format:'glb',size:2.0,x:-10,z:-37},
- {id:'weapon-prototype-c',label:'Futuristic weapon prototype C',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027070357_generate.glb',format:'glb',size:2.0,x:-20,z:-31},
- {id:'shotgun-fbx',label:'Combat shotgun FBX variant',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_combat_shotgun_with_20261025_generate.fbx',format:'fbx',size:2.0,x:-29,z:-22},
- {id:'compact-vehicle-a',label:'Compact military vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_compact_futuristic_military_20261025_generate.fbx',format:'fbx',size:5.2,x:-36,z:-9},
- {id:'amphibious-vehicle',label:'Amphibious combat vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_amphibious_20261025_generate.fbx',format:'fbx',size:6.2,x:-37,z:5},
- {id:'heavy-vehicle',label:'Heavy combat vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_heavy_20261025_generate.fbx',format:'fbx',size:5.8,x:-35,z:21},
- {id:'self-propelled-vehicle',label:'Self-propelled military vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_self_20261025_generate.fbx',format:'fbx',size:5.5,x:37,z:19},
- {id:'compact-vehicle-b',label:'Compact military vehicle variant',url:'assets/models/vehicles/Meshy_AI_Realistic_futuristic_compact_military_20261025_generate.fbx',format:'fbx',size:5.0,x:38,z:5},
- {id:'aircraft',label:'Futuristic fighter aircraft',url:'assets/models/generated/avion-chasse-futuriste.glb',format:'glb',size:6.0,x:36,z:-12},
- {id:'armory-structure',label:'Futuristic outpost structure variant',url:'assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',format:'fbx',size:7.0,x:0,z:-49}
-].map(asset=>({...asset,loaded:null,failed:false,nextTry:0,impostor:null}));
+const galleryAssets = [].map(asset=>({...asset,loaded:null,failed:false,nextTry:0,impostor:null}));
 let galleryCursor=0,galleryCheckAt=0,galleryBusy=false,galleryEnabled=false;
 
 // Distance LOD: lightweight canvas impostors stand in for gallery models until the player approaches.
@@ -476,9 +439,20 @@ setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updat
 
 
 // Interactive battlefield assets: reusable road, abandoned buildings, motorcycle and weapon pickup.
-const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike');
+const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike'),interactButton=document.querySelector('#interactWorld');
 let weaponPickup=null, motorcycle=null, ridingBike=false, bikeModelReady=false;
-const abandonedBuildings=[], roadSegments=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false;
+const abandonedBuildings=[], roadSegments=[],doorInteractables=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false;
+function makeInteractiveDoor(x,z,rotation=0){
+ const rootDoor=new THREE.Group();rootDoor.position.set(x,0,z);rootDoor.rotation.y=rotation;scene.add(rootDoor);
+ const frameMat=new THREE.MeshStandardMaterial({color:0x454f55,metalness:.55,roughness:.7});
+ const panelMat=new THREE.MeshStandardMaterial({color:0x26343b,metalness:.45,roughness:.6});
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(1.35,2.25,.16),frameMat);frame.position.set(0,1.12,2.04);rootDoor.add(frame);
+ const hinge=new THREE.Group();hinge.position.set(-.57,.04,2.14);rootDoor.add(hinge);
+ const panel=new THREE.Mesh(new THREE.BoxGeometry(1.1,2.08,.1),panelMat);panel.position.set(.55,1.04,0);hinge.add(panel);
+ const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.07),new THREE.MeshStandardMaterial({color:0xffbd56,metalness:.7,roughness:.3}));handle.position.set(.96,1.02,-.07);hinge.add(handle);
+ doorInteractables.push({root:rootDoor,hinge,panel,open:false,x,z,rotation});
+}
+for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeInteractiveDoor(p[0],p[1],p[2]);
 function createRubble(x,z,seed=1){
  const rng=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
  for(let i=0;i<7;i++){
@@ -569,18 +543,21 @@ loadReusableGLB('assets/models/generated/railgun-electromagnetique.glb',template
  weaponPickup.remove(pickupFallback);const m=template.clone(true),bounds=new THREE.Box3().setFromObject(m),size=bounds.getSize(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  m.scale.setScalar(.9/Math.max(.01,largest));m.position.y=.25;weaponPickup.add(m);
 });
+function closestDoor(){let best=null,bestD=Infinity;for(const d of doorInteractables){const dx=player.position.x-d.x,dz=player.position.z-d.z,dist=Math.hypot(dx,dz);if(dist<bestD){best=d;bestD=dist}}return best&&bestD<3.4?best:null}
 function updateContextActions(){
  const distBike=Math.hypot(player.position.x-motorcycle.position.x,player.position.z-motorcycle.position.z);
  const distWeapon=weaponPickup?.visible?Math.hypot(player.position.x-weaponPickup.position.x,player.position.z-weaponPickup.position.z):Infinity;
+ const door=closestDoor();interactButton.classList.toggle('visible',!!door&&!ridingBike);interactButton.textContent=door?(door.open?'FERMER LA PORTE':'OUVRIR LA PORTE'):'INTERAGIR';
  mountButton.classList.toggle('visible',ridingBike||distBike<3.1);
  mountButton.textContent=ridingBike?'DESCENDRE DE LA MOTO':'MONTER SUR LA MOTO';
  pickupButton.classList.toggle('visible',!!weaponPickup?.visible&&distWeapon<2.5);
 }
-pickupButton.addEventListener('pointerdown',e=>{e.preventDefault();if(!weaponPickup?.visible||Math.hypot(player.position.x-weaponPickup.position.x,player.position.z-weaponPickup.position.z)>2.7)return;weaponPickup.visible=false;reserveAmmo+=30;updateAmmoDisplay();showMessage('Arme ramassée · +30 munitions');updateContextActions()});
+interactButton.addEventListener('pointerdown',e=>{e.preventDefault();const d=closestDoor();if(!d||ridingBike)return;d.open=!d.open;d.hinge.rotation.y=d.open?-Math.PI*.78:0;showMessage(d.open?'Porte ouverte':'Porte fermée');updateContextActions()});
+pickupButton.addEventListener('pointerdown',e=>{e.preventDefault();if(!weaponPickup?.visible||Math.hypot(player.position.x-weaponPickup.position.x,player.position.z-weaponPickup.position.z)>2.7)return;weaponPickup.visible=false;reserveAmmo+=30;updateAmmoDisplay();if(weaponModel)attachWeaponToHand();showMessage('Arme équipée · +30 munitions');updateContextActions()});
 mountButton.addEventListener('pointerdown',e=>{
  e.preventDefault();
- if(ridingBike){ridingBike=false;player.position.x=motorcycle.position.x+1.25;player.position.z=motorcycle.position.z;playerModelVisibility(true);showMessage('Tu es descendu de la moto');}
- else if(Math.hypot(player.position.x-motorcycle.position.x,player.position.z-motorcycle.position.z)<3.3){ridingBike=true;player.position.x=motorcycle.position.x;player.position.z=motorcycle.position.z;playerModelVisibility(false);showMessage('Moto activée · utilise le joystick pour conduire');}
+ if(ridingBike){ridingBike=false;player.position.x=motorcycle.position.x+1.35;player.position.z=motorcycle.position.z;player.position.y=0;if(militaryModel)militaryModel.position.y=0;playerModelVisibility(true);setMountTransition('dismount');showMessage('Tu descends de la moto');}
+ else if(Math.hypot(player.position.x-motorcycle.position.x,player.position.z-motorcycle.position.z)<3.3){ridingBike=true;player.position.x=motorcycle.position.x;player.position.z=motorcycle.position.z;player.position.y=0;if(militaryModel)militaryModel.position.y=.48;playerModelVisibility(true);setMountTransition('mount');showMessage('Tu montes sur la moto');}
  updateContextActions();
 });
 function playerModelVisibility(visible){
@@ -595,6 +572,9 @@ const vfxGroup = new THREE.Group(); scene.add(vfxGroup);
 const flashMat = new THREE.MeshBasicMaterial({color:0xffd36a, transparent:true, opacity:0, depthWrite:false});
 const muzzleFlash = new THREE.Mesh(new THREE.SphereGeometry(.12,6,5), flashMat);
 vfxGroup.add(muzzleFlash);
+const tracerGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+const tracerMaterial=new THREE.LineBasicMaterial({color:0xffed9a,transparent:true,opacity:1,depthWrite:false});
+const bulletTracer=new THREE.Line(tracerGeometry,tracerMaterial);bulletTracer.visible=false;vfxGroup.add(bulletTracer);let tracerLife=0;
 const particleGeometry = new THREE.SphereGeometry(.035,4,3);
 const particleMaterial = new THREE.MeshBasicMaterial({color:0xff9b3d, transparent:true, opacity:.9, depthWrite:false});
 const particles = [];
@@ -604,8 +584,11 @@ for (let i=0;i<18;i++) {
   particles.push({mesh,life:0,velocity:new THREE.Vector3()});
 }
 let vfxClock = 0;
-function triggerWeaponVFX() {
+function triggerWeaponVFX(targetPoint=null) {
   const muzzle = new THREE.Vector3(.48,1.22,-.62).applyAxisAngle(new THREE.Vector3(0,1,0), playerYaw).add(player.position);
+  const tracerEnd=targetPoint?targetPoint.clone():muzzle.clone().add(new THREE.Vector3(0,0,-22).applyAxisAngle(new THREE.Vector3(0,1,0),yaw));
+  tracerGeometry.setFromPoints([muzzle,tracerEnd]);tracerGeometry.attributes.position.needsUpdate=true;tracerGeometry.computeBoundingSphere();bulletTracer.visible=true;tracerLife=.13;tracerMaterial.opacity=1;
+  choosePlayerAction('fire');playerActionTimer=.22;
   // Strong, visible test flash plus a short forward tracer so FIRE always has a visible result.
   muzzleFlash.position.copy(muzzle); muzzleFlash.scale.set(2.8,2.8,3.6); flashMat.opacity=1; vfxClock=.18;
   muzzleFlash.visible=true;
@@ -636,11 +619,17 @@ function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
 window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||null,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
 window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()}};
-window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length});
+window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:0,interactiveDoors:doorInteractables.length});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
-function isBlocked(x,z){for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}return false}
+function isBlocked(x,z){
+ if(Math.abs(x)>96||Math.abs(z)>96)return true;
+ for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}
+ for(const b of abandonedBuildings){const dx=x-b.position.x,dz=z-b.position.z,c=Math.cos(-b.rotation.y),s=Math.sin(-b.rotation.y),lx=dx*c-dz*s,lz=dx*s+dz*c;if(Math.abs(lx)<2.85&&Math.abs(lz)<2.45)return true}
+ for(const d of doorInteractables){if(d.open)continue;const dx=x-d.x,dz=z-d.z,c=Math.cos(-d.rotation),s=Math.sin(-d.rotation),lx=dx*c-dz*s,lz=dx*s+dz*c;if(Math.abs(lx)<.72&&Math.abs(lz-2.1)<.32)return true}
+ return false
+}
 let fpsAdaptStamp=performance.now(),lowFpsWindows=0,highFpsWindows=0;function animate(now){if(fatalErrorActive)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){const measuredFps=Math.round(frames*1000/(now-fpsStamp));document.querySelector('#fps').textContent=measuredFps;if(now-fpsAdaptStamp>1800){if(measuredFps<29){lowFpsWindows++;highFpsWindows=0;if(lowFpsWindows>=1&&renderScale>minRenderScale){renderScale=Math.max(minRenderScale,renderScale-.05);applyRenderScale();lowFpsWindows=0}}else if(measuredFps>33){highFpsWindows++;lowFpsWindows=0;if(highFpsWindows>=4&&renderScale<maxRenderScale){renderScale=Math.min(maxRenderScale,renderScale+.025);applyRenderScale();highFpsWindows=0}}else{lowFpsWindows=0;highFpsWindows=0}fpsAdaptStamp=now}frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*(ridingBike?2.2:1)*dt;if(player.position.y>0||jumpVelocity>0){player.position.y+=jumpVelocity*dt;jumpVelocity-=15*dt;if(player.position.y<=0){player.position.y=0;jumpVelocity=0}}const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
@@ -649,7 +638,8 @@ const speed=(sprinting||keys.shift?9:5)*(ridingBike?2.2:1)*dt;if(player.position
  if(!isBlocked(nx,player.position.z))player.position.x=THREE.MathUtils.clamp(nx,-95,95);
  if(!isBlocked(player.position.x,nz))player.position.z=THREE.MathUtils.clamp(nz,-95,95);
  if(mag>.08){const worldMoveX=forward.x*(-iy)+right.x*ix,worldMoveZ=forward.z*(-iy)+right.z*ix;playerYaw=Math.atan2(-worldMoveX,-worldMoveZ)}
- if(ridingBike){motorcycle.position.set(player.position.x,0,player.position.z);motorcycle.rotation.y=playerYaw;}
+ if(ridingBike){motorcycle.position.set(player.position.x,0,player.position.z);motorcycle.rotation.y=playerYaw;if(militaryModel){militaryModel.visible=true;militaryModel.position.y=THREE.MathUtils.lerp(militaryModel.position.y,.48,Math.min(1,dt*8));}}
+ else if(militaryModel&&militaryModel.position.y!==0&&mountTransition<=0)militaryModel.position.y=0;
  player.rotation.y=playerYaw;updateContextActions();
 const target=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);const shoulder=aiming ? 1.05 : 1.2,backDistance=aiming ? 4.0 : 6.0;const back=new THREE.Vector3(Math.sin(yaw)*backDistance,aiming ? 1.5 : 2.2,Math.cos(yaw)*backDistance);const shoulderOffset=new THREE.Vector3(Math.cos(yaw)*shoulder,0,-Math.sin(yaw)*shoulder);const cameraDestination=target.clone().add(back).add(shoulderOffset);camera.position.lerp(cameraDestination,1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.15,0)));
 energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
@@ -663,7 +653,16 @@ energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
   }
   d.hp.quaternion.copy(camera.quaternion);
  }
- document.querySelector('#energy').textContent=Math.round(energy)+'%';if(militaryMixer)militaryMixer.update(dt);if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
+ document.querySelector('#energy').textContent=Math.round(energy)+'%';
+ if(militaryMixer)militaryMixer.update(dt);
+ if(playerActionTimer>0)playerActionTimer=Math.max(0,playerActionTimer-dt);
+ if(mountTransition>0)mountTransition=Math.max(0,mountTransition-dt);
+ const movingNow=Math.hypot(ix,iy)>.12;
+ if(playerActionTimer<=0&&mountTransition<=0){if(ridingBike)choosePlayerAction('ride');else if(jumpVelocity>.4)choosePlayerAction('jump');else if(movingNow)choosePlayerAction(sprinting||keys.shift?'run':'walk');else choosePlayerAction('idle')}
+ // Apply only bone-level motions that exist in this model's rig; no arbitrary animation clips are played.
+ const phase=now*.009*(sprinting||keys.shift?1.65:1);for(const [name,bone] of Object.entries(playerRigBones)){const rest=playerRigRest.get(bone);if(!rest)continue;bone.rotation.set(rest.x,rest.y,rest.z);if(ridingBike){if(name==='rightThigh'||name==='leftThigh')bone.rotation.x=rest.x-1.0;if(name==='rightLeg'||name==='leftLeg')bone.rotation.x=rest.x+1.0;if(name==='rightArm'||name==='leftArm')bone.rotation.x=rest.x-.55;if(name==='rightForearm'||name==='leftForearm')bone.rotation.x=rest.x-.25}else if(movingNow){if(name==='rightThigh')bone.rotation.x=rest.x+Math.sin(phase)*.55;if(name==='leftThigh')bone.rotation.x=rest.x-Math.sin(phase)*.55;if(name==='rightLeg')bone.rotation.x=rest.x+Math.max(0,-Math.sin(phase))*.45;if(name==='leftLeg')bone.rotation.x=rest.x+Math.max(0,Math.sin(phase))*.45;if(name==='leftArm')bone.rotation.x=rest.x-Math.sin(phase)*.35;if(name==='rightArm')bone.rotation.x=rest.x+Math.sin(phase)*.18}else if(playerActionTimer>0&&currentPlayerAction==='fire'){if(name==='rightArm')bone.rotation.x=rest.x-.75;if(name==='rightForearm')bone.rotation.x=rest.x-.35;if(name==='leftArm')bone.rotation.x=rest.x-.5}else if(mountTransition>0){if(name==='hips')bone.rotation.x=rest.x-.22;if(name==='rightThigh'||name==='leftThigh')bone.rotation.x=rest.x-.45}}
+ if(tracerLife>0){tracerLife=Math.max(0,tracerLife-dt);tracerMaterial.opacity=tracerLife/.13;bulletTracer.visible=tracerLife>0}else bulletTracer.visible=false;
+ if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94)}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
 placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Field test ready. Ogo, explore le champ de bataille.');requestAnimationFrame(animate);
 </script>
 </body></html>
