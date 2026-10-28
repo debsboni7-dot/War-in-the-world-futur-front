@@ -59,7 +59,7 @@ jobs:
       - name: Install browser smoke-test tools
         run: |
           npm install --no-save playwright
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Launch the game in headless Chromium
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/war-game-server.log 2>&1 &
