@@ -15,8 +15,11 @@
     {
       "asset": "batiment-abandonne-debris",
       "credits": 30,
-      "status": "reserved",
-      "created_at": "2026-10-28T14:36:48.939Z"
+      "status": "completed",
+      "created_at": "2026-10-28T14:36:48.939Z",
+      "mesh_task_id": "01a182f1-4021-73f3-9f74-c3136dd16551",
+      "texture_task_id": "01a182f2-3d0b-7296-ac5a-2608d620ffa8",
+      "completed_at": "2026-10-28T14:38:57.561Z"
     }
   ],
   "future_reservation_credits": 30

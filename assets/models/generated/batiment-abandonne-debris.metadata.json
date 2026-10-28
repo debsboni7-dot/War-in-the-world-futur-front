@@ -1,0 +1,12 @@
+{
+  "name": "batiment-abandonne-debris",
+  "prompt": "Create one realistic abandoned futuristic military/industrial building for a third-person sci-fi battlefield. Modular reusable asset, partially collapsed concrete walls, exposed rusty steel beams, broken windows, weathered paint, bullet impacts, rubble piles and scattered concrete chunks integrated around its base, damaged entrance, believable human scale, grounded proportions, game-ready low-to-medium poly mesh with clean topology, PBR materials, UVs, GLB output. No people, no text, no logos, no background, no floating debris. Optimize geometry for mobile real-time use. Keep the building silhouette readable from a distance. Name: batiment-abandonne-debris.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a182f1-4021-73f3-9f74-c3136dd16551",
+  "texture_task_id": "01a182f2-3d0b-7296-ac5a-2608d620ffa8",
+  "generated_at": "2026-10-28T14:38:57.561Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
