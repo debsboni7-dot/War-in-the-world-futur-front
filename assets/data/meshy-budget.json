@@ -1,7 +1,7 @@
 {
   "budget_limit_credits": 200,
-  "reserved_credits": 20,
-  "available_credits": 180,
+  "reserved_credits": 50,
+  "available_credits": 150,
   "policy": "Hard cap for this authorized Meshy budget. Current completed Meshy 6 Lite asset is conservatively recorded at 20 credits (5 mesh + 15 texture per current API pricing). Every future generation reserves 30 credits before submitting (20 expected + 10 safety margin). Do not start if the reservation would exceed 200. Failed/refunded tasks remain reserved conservatively unless reconciled from Meshy usage records.",
   "reservations": [
     {
@@ -11,6 +11,12 @@
       "mesh_task_id": "01a182ad-4cfa-73ec-bc0f-923b4531e4a5",
       "texture_task_id": "01a182ae-087f-712b-b0f0-6022a76d5ca4",
       "created_at": "2026-10-28T13:22:37Z"
+    },
+    {
+      "asset": "batiment-abandonne-debris",
+      "credits": 30,
+      "status": "reserved",
+      "created_at": "2026-10-28T14:36:48.939Z"
     }
   ],
   "future_reservation_credits": 30
