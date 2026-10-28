@@ -187,7 +187,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);for(const clip of militaryAnimations){if(/idle|stand|breath|walk|run|sprint|jump|shoot|fire|attack|reload|mount|dismount|ride|motorcycle|drive|sit/i.test(clip.name))playerActions[clip.name]=militaryMixer.clipAction(clip)}const idle=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name));if(idle){playerActions[idle.name].play();currentPlayerAction=idle.name;currentPlayerActionHasClip=true;console.info('Compatible idle animation:',idle.name)}}findRigBones(model);
   if(weaponModel)attachWeaponToHand();
   window.__warPlayerModelSource=source;
- window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
+ window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,weaponModelVisible:!!weaponModel?.visible,ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
   console.info('Playable character model loaded:',source);
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
@@ -214,7 +214,7 @@ function attachWeaponToHand(){
  if(hand){
   weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
   // Conservative hand grip placement; fine alignment can be tuned after a visual test.
-  weaponModel.position.set(.04,-.025,-.12);weaponModel.rotation.set(0,Math.PI/2,0);
+  weaponModel.position.set(.06,-.015,-.2);weaponModel.rotation.set(-.08,Math.PI/2,0);
   weaponAnchor='right-hand bone';
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
@@ -232,7 +232,7 @@ function prepareWeaponModel(model){
   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);mat.needsUpdate=true})});
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
-  model.scale.multiplyScalar(.72/maxDim);weaponModel=model;attachWeaponToHand();gun.visible=false;
+  model.scale.multiplyScalar((.72/maxDim)*1.15);weaponModel=model;attachWeaponToHand();gun.visible=false;
  }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
 let weaponFallbackStarted=false;
