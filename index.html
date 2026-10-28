@@ -137,13 +137,8 @@ loadPhotoPBRMap('concrete_floor','nor_gl',2,'concrete','normalMap');
 loadPhotoPBRMap('concrete_floor','rough',2,'concrete','roughnessMap');
 loadPhotoPBRMap('rusty_painted_metal','nor_gl',2,'metal','normalMap');
 loadPhotoPBRMap('rusty_painted_metal','rough',2,'metal','roughnessMap');
-// Batch repeated outpost pieces into four instanced draw calls instead of 36 separate meshes.
-const outpostConcrete=new THREE.InstancedMesh(new THREE.BoxGeometry(4,2.5,3),new THREE.MeshStandardMaterial({color:0xffffff,map:concreteTex,roughness:.9}),9);
-const outpostRoof=new THREE.InstancedMesh(new THREE.BoxGeometry(4.2,.25,3.2),new THREE.MeshStandardMaterial({color:0xffffff,map:metalTex,roughness:.68,metalness:.35}),9);
-const outpostLights=new THREE.InstancedMesh(new THREE.BoxGeometry(.15,1.1,.15),new THREE.MeshStandardMaterial({color:0xffa640,emissive:0x6c3000,emissiveIntensity:.5}),18);
-const outpostTransform=new THREE.Object3D();
-for(let i=0;i<9;i++){const x=(i%3-1)*9,z=-16-Math.floor(i/3)*7;outpostTransform.position.set(x,1.25,z);outpostTransform.updateMatrix();outpostConcrete.setMatrixAt(i,outpostTransform.matrix);outpostTransform.position.set(x,2.6,z);outpostTransform.updateMatrix();outpostRoof.setMatrixAt(i,outpostTransform.matrix);for(let side=0;side<2;side++){outpostTransform.position.set(x+(side===0?-1.4:1.4),1.3,z+1.56);outpostTransform.updateMatrix();outpostLights.setMatrixAt(i*2+side,outpostTransform.matrix)}}
-scene.add(outpostConcrete,outpostRoof,outpostLights);
+// City streets stay clear: no placeholder block wall across the road. Real buildings are streamed on the sidewalks.
+
 // Player movement root: the military FBX is the visible character when loaded.
 const player=new THREE.Group();scene.add(player);
 const suit=new THREE.MeshStandardMaterial({color:0x344b59,roughness:.72}),armor=new THREE.MeshStandardMaterial({color:0x9ba9ad,metalness:.45,roughness:.48}),visor=new THREE.MeshStandardMaterial({color:0x32c9d0,metalness:.35,roughness:.25,emissive:0x07545a});
@@ -325,11 +320,11 @@ function loadEnemyDrone(){
 }
 setTimeout(loadEnemyDrone,5500);
 setTimeout(async()=>{
- const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr-v2.glb',{x:0,y:0,z:-28},7,'PBR outpost structure');
- if(!structure)await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',{x:0,y:0,z:-28},7,'outpost structure fallback',2.8);
+ const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr-v2.glb',{x:18,y:0,z:-32},7,'PBR city building');
+ if(!structure)await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',{x:18,y:0,z:-32},7,'city building fallback',2.8);
  await new Promise(r=>setTimeout(r,900));
- const vehicle=await loadWorldGLB('assets/models/textured/vehicule-blinde-compact-pbr-v2.glb',{x:8,y:0,z:-8},5,'PBR compact armored vehicle');
- if(!vehicle)await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx',{x:8,y:0,z:-8},5,'stealth vehicle fallback',2.7);
+ const vehicle=await loadWorldGLB('assets/models/textured/vehicule-blinde-compact-pbr-v2.glb',{x:8,y:0,z:-12},5,'PBR compact armored vehicle');
+ if(!vehicle)await loadWorldFBX('assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_stealth_20261025_generate.fbx',{x:8,y:0,z:-12},5,'stealth vehicle fallback',2.7);
  await new Promise(r=>setTimeout(r,900));
  const robot=await loadWorldGLB('assets/models/textured/robot-combat-pbr-v2.glb',{x:-7,y:0,z:-7},2.1,'PBR combat robot');
  if(!robot&&!isLowMemoryPhone)await loadWorldFBX('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',{x:-7,y:0,z:-7},2.1,'combat robot fallback',10.1);
@@ -622,7 +617,7 @@ window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.po
 window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:0,interactiveDoors:doorInteractables.length});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
-const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
+const collisionBlocks=[];
 function isBlocked(x,z){
  if(Math.abs(x)>96||Math.abs(z)>96)return true;
  for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}
