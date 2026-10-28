@@ -33,6 +33,51 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Reserve Meshy budget before paid generation
+        env:
+          ASSET_NAME: ${{ github.event_name == 'issues' && startsWith(github.event.issue.title, '[GENERATE3D] ') && github.event.issue.title || inputs.asset_name }}
+          MODEL_PROMPT: ${{ github.event_name == 'issues' && github.event.issue.body || inputs.prompt }}
+          ISSUE_EVENT: ${{ github.event_name == 'issues' }}
+        run: |
+          if [[ "$MODEL_PROMPT" == RECOVER_TASKS=* ]]; then
+            echo "Recovery mode: no new Meshy task and no additional credits."
+            exit 0
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const raw = (process.env.ASSET_NAME || '').trim();
+          const normalized = (process.env.ISSUE_EVENT === 'true' ? raw.replace(/^\\[GENERATE3D\\]\\s*/i, '') : raw)
+            .trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
+          if (!normalized) throw new Error('Invalid asset name; budget was not reserved.');
+          const output = path.join('assets', 'models', 'generated', `${normalized}.glb`);
+          if (fs.existsSync(output)) throw new Error(`Asset ${output} already exists; refusing to reserve or generate it again.`);
+          const budgetPath = path.join('assets', 'data', 'meshy-budget.json');
+          const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
+          const cost = 20; // Meshy 6 Lite API preview + textured refine, conservatively reserved.
+          if (budget.reserved_credits + cost > budget.budget_limit_credits) {
+            throw new Error(`Meshy hard cap blocked this task: reserved=${budget.reserved_credits}, estimated=${cost}, limit=${budget.budget_limit_credits}.`);
+          }
+          budget.reserved_credits += cost;
+          budget.available_credits = budget.budget_limit_credits - budget.reserved_credits;
+          budget.reservations.push({asset:normalized,credits:cost,status:'reserved',created_at:new Date().toISOString()});
+          fs.writeFileSync(budgetPath, JSON.stringify(budget, null, 2) + '\\n');
+          console.log(`Reserved ${cost} credits for ${normalized}; remaining authorized budget: ${budget.available_credits}.`);
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/data/meshy-budget.json
+          git commit -m "Reserve Meshy credits for $ASSET_NAME"
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            echo "Reservation push conflict; rebasing (attempt $attempt)"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort || true; sleep 2; }
+            sleep 2
+          done
+          echo "Could not reserve Meshy credits; generation blocked."
+          exit 1
+
       - name: Generate, texture and download GLB
         env:
           MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
@@ -151,6 +196,18 @@ jobs:
               generated_at: new Date().toISOString(),
               note: 'GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation.'
             }, null, 2) + '\n');
+            const budgetPath = path.join('assets', 'data', 'meshy-budget.json');
+            if (fs.existsSync(budgetPath)) {
+              const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
+              const reservation = [...budget.reservations].reverse().find(item => item.asset === name && item.status === 'reserved');
+              if (reservation) {
+                reservation.status = 'completed';
+                reservation.mesh_task_id = previewTask.id || preview.result;
+                reservation.texture_task_id = finalTask.id || refine.result;
+                reservation.completed_at = new Date().toISOString();
+                fs.writeFileSync(budgetPath, JSON.stringify(budget, null, 2) + '\n');
+              }
+            }
             console.log(`GLB prêt : ${output} (${bytes.length} octets)`);
           }
 
@@ -164,7 +221,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/models/generated/
+          git add assets/models/generated/ assets/data/meshy-budget.json
           if git diff --cached --quiet; then
             echo "Aucun nouveau fichier à enregistrer."
             exit 1
