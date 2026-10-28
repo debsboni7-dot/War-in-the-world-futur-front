@@ -86,15 +86,15 @@ const enemies=[];
 const enemyMetal=new THREE.MeshStandardMaterial({color:0x34414a,metalness:.7,roughness:.38});
 const enemyRed=new THREE.MeshStandardMaterial({color:0xff4057,emissive:0x8d071b,emissiveIntensity:1.4,metalness:.25,roughness:.3});
 function spawnEnemy(x,z,index){
- const e=new THREE.Group();e.position.set(x,0,z);e.userData={health:100,maxHealth:100,dead:false,cooldown:1+index*.3,flash:0};
- const body=new THREE.Mesh(new THREE.BoxGeometry(.72,1.05,.42),enemyMetal);body.position.y=1.05;e.add(body);
- const head=new THREE.Mesh(new THREE.BoxGeometry(.48,.36,.4),enemyMetal);head.position.set(0,1.78,-.02);e.add(head);
- const eye=new THREE.Mesh(new THREE.BoxGeometry(.32,.09,.045),enemyRed);eye.position.set(0,1.8,-.235);eye.userData.enemyEye=true;e.add(eye);
- for(const side of [-1,1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.2,.62,.24),enemyMetal);leg.position.set(side*.22,.36,0);e.add(leg);const arm=new THREE.Mesh(new THREE.BoxGeometry(.18,.68,.22),enemyMetal);arm.position.set(side*.49,1.12,-.03);e.add(arm)}
+ const e=new THREE.Group();e.position.set(x,0,z);e.userData={health:100,maxHealth:100,dead:false,cooldown:1+index*.3,flash:0};const fallbackVisual=[];
+ const body=new THREE.Mesh(new THREE.BoxGeometry(.72,1.05,.42),enemyMetal);body.position.y=1.05;e.add(body);fallbackVisual.push(body);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.48,.36,.4),enemyMetal);head.position.set(0,1.78,-.02);e.add(head);fallbackVisual.push(head);
+ const eye=new THREE.Mesh(new THREE.BoxGeometry(.32,.09,.045),enemyRed);eye.position.set(0,1.8,-.235);eye.userData.enemyEye=true;e.add(eye);fallbackVisual.push(eye);
+ for(const side of [-1,1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.2,.62,.24),enemyMetal);leg.position.set(side*.22,.36,0);e.add(leg);fallbackVisual.push(leg);const arm=new THREE.Mesh(new THREE.BoxGeometry(.18,.68,.22),enemyMetal);arm.position.set(side*.49,1.12,-.03);e.add(arm);fallbackVisual.push(arm)}
  const hp=new THREE.Group();hp.position.y=2.25;e.add(hp);
  const back=new THREE.Mesh(new THREE.PlaneGeometry(1,.1),new THREE.MeshBasicMaterial({color:0x1b2025,side:THREE.DoubleSide}));hp.add(back);
  const fill=new THREE.Mesh(new THREE.PlaneGeometry(.96,.065),new THREE.MeshBasicMaterial({color:0xff4057,side:THREE.DoubleSide}));fill.position.z=.006;hp.add(fill);hp.userData.fill=fill;e.userData.hp=hp;
- scene.add(e);enemies.push(e);
+ e.userData.fallbackVisual=fallbackVisual;scene.add(e);enemies.push(e);
 }
 spawnEnemy(-5,-7,0);spawnEnemy(5,-12,1);spawnEnemy(-9,-20,2);spawnEnemy(10,-24,3);
 function updateEnemyCounter(){document.querySelector('#hostiles').textContent=String(enemies.filter(e=>!e.userData.dead).length).padStart(2,'0')}
@@ -269,6 +269,28 @@ function loadWorldGLB(url, position, targetSize, label){
   },undefined,e=>{console.warn('Textured GLB not ready; using fallback:',label,e);resolve(null)});
  });
 }
+let enemyDroneTemplate=null;
+function applyEnemyDrone(template){
+ for(const enemy of enemies){
+  if(enemy.userData.droneVisual)continue;
+  try{
+   const visual=template.clone(true),bounds=new THREE.Box3().setFromObject(visual),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
+   if(!Number.isFinite(largest)||largest<.001)throw new Error('Invalid drone model bounds');
+   const scale=1.45/largest;visual.scale.setScalar(scale);
+   visual.position.set(-center.x*scale,.82-bounds.min.y*scale,-center.z*scale);
+   visual.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});
+   enemy.add(visual);enemy.userData.droneVisual=visual;enemy.userData.droneBaseY=visual.position.y;
+   enemy.userData.fallbackVisual?.forEach(part=>part.visible=false);
+  }catch(e){console.warn('Drone visual could not be attached; fallback enemy retained.',e)}
+ }
+}
+function loadEnemyDrone(){
+ if(!GLTFLoader||(navigator.deviceMemory&&navigator.deviceMemory<=2))return;
+ new GLTFLoader().load('assets/models/generated/drone-combat-futuriste.glb',gltf=>{
+  enemyDroneTemplate=gltf.scene;applyEnemyDrone(enemyDroneTemplate);showMessage('Drone de combat chargé');
+ },undefined,error=>console.warn('Drone GLB unavailable; fallback enemies remain active.',error));
+}
+setTimeout(loadEnemyDrone,5500);
 setTimeout(async()=>{
  const structure=await loadWorldGLB('assets/models/textured/structure-outpost-pbr-v2.glb',{x:0,y:0,z:-28},7,'PBR outpost structure');
  if(!structure)await loadWorldFBX('assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',{x:0,y:0,z:-28},7,'outpost structure fallback',2.8);
@@ -335,7 +357,7 @@ const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>
  player.rotation.y=yaw;
 const target=new THREE.Vector3(player.position.x,player.position.y+1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*(aiming?4.5:7),aiming?2.6:3.4,Math.cos(yaw)*(aiming?4.5:7));camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
 energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
- for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
+ for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;if(d.droneVisual)d.droneVisual.position.y=d.droneBaseY+Math.sin(now*.004+enemy.position.x)*.075;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
   if(dist>2.3&&dist<42){enemy.position.x+=dx/dist*dt*.8;enemy.position.z+=dz/dist*dt*.8}
   if(dist>.01)enemy.rotation.y=Math.atan2(-dx,-dz);
   d.cooldown-=dt;if(dist<2.2&&d.cooldown<=0){energy=Math.max(0,energy-8);d.cooldown=1.2;showMessage('ATTAQUE ENNEMIE · ÉNERGIE -8')}
