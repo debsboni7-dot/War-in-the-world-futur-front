@@ -117,13 +117,27 @@ jobs:
             const mobileState = await mobile.evaluate(() => {
               const canvas=document.querySelector('#game canvas');
               const visible=id=>{const el=document.querySelector(id);if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(el).display!=='none'};
-              return {canvas:!!canvas&&canvas.width>0&&canvas.height>0,stick:visible('#stick'),fire:visible('#fire'),jump:visible('#jump'),reload:visible('#reload'),aim:visible('#aim'),run:visible('#run'),message:document.querySelector('#message')?.textContent||''};
+              return {canvas:!!canvas&&canvas.width>0&&canvas.height>0,stick:visible('#stick'),fire:visible('#fire'),jump:visible('#jump'),reload:visible('#reload'),aim:visible('#aim'),run:visible('#run'),message:document.querySelector('#message')?.textContent||'',fps:document.querySelector('#fps')?.textContent||'--'};
             });
-            console.log(JSON.stringify({mobileState,mobileErrors},null,2));
+            // Exercise the actual mobile joystick and verify that it moves the player, not just that it is visible.
+            const mobileBeforeMove = await mobile.evaluate(() => window.__warCameraTestState());
+            const stickBox = await mobile.locator('#stick').boundingBox();
+            if (!stickBox) throw new Error('Mobile joystick has no measurable hit area');
+            const stickX = stickBox.x + stickBox.width/2, stickY = stickBox.y + stickBox.height/2;
+            await mobile.mouse.move(stickX,stickY);
+            await mobile.mouse.down();
+            await mobile.mouse.move(stickX,stickY-35,{steps:4});
+            await mobile.waitForTimeout(900);
+            const mobileAfterMove = await mobile.evaluate(() => window.__warCameraTestState());
+            await mobile.mouse.up();
+            const playerTravel = Math.hypot(mobileAfterMove.playerX-mobileBeforeMove.playerX,mobileAfterMove.playerZ-mobileBeforeMove.playerZ);
+            console.log(JSON.stringify({mobileState,mobileBeforeMove,mobileAfterMove,playerTravel,mobileErrors},null,2));
             await mobile.close();
             if (!mobileState.canvas) throw new Error('Mobile canvas did not initialize');
             for (const control of ['stick','fire','jump','reload','aim','run']) if (!mobileState[control]) throw new Error('Mobile control not visible: '+control);
             if (mobileErrors.length) throw new Error('Mobile JavaScript errors: '+mobileErrors.join(' | '));
+            if (playerTravel < 0.2) throw new Error('Mobile joystick did not move the player; travelled '+playerTravel);
+            if (mobileState.fps === '0') console.warn('WARNING: Chromium software-rendered FPS counter is 0; this is not a real-device FPS benchmark.');
             await browser.close();
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
