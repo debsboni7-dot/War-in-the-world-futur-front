@@ -175,7 +175,9 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   model.scale.multiplyScalar(scale);
   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
   model.updateMatrixWorld(true);
-  playerMeasuredHeight=height*scale;
+  let fittedBounds=new THREE.Box3().setFromObject(model,true),fittedSize=fittedBounds.getSize(new THREE.Vector3());
+  playerMeasuredHeight=fittedSize.y;
+  if(Number.isFinite(playerMeasuredHeight)&&playerMeasuredHeight>0.01&&(playerMeasuredHeight>2.15||playerMeasuredHeight<1.55)){const correction=1.85/playerMeasuredHeight;model.scale.multiplyScalar(correction);model.updateMatrixWorld(true);fittedBounds=new THREE.Box3().setFromObject(model,true);const fittedCenter=fittedBounds.getCenter(new THREE.Vector3());model.position.x-=fittedCenter.x;model.position.y-=fittedBounds.min.y;model.position.z-=fittedCenter.z;model.updateMatrixWorld(true);playerMeasuredHeight=1.85;}
   model.traverse(o=>{
    if(!o.isMesh)return;o.frustumCulled=true;
    if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
