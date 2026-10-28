@@ -60,7 +60,7 @@ jobs:
           const {execFileSync}=require('child_process');
           const base='https://api.meshy.ai/openapi/v1';
           const key=process.env.MESHY_API_KEY;
-          function pushWithRetry(){for(let attempt=1;attempt<=4;attempt++){try{pushWithRetry();return}catch(e){console.log('Push conflict; rebasing retry '+attempt);execFileSync('git',['fetch','origin','main']);execFileSync('git',['rebase','origin/main']);}}throw new Error('Could not push generated assets after four retries');}
+          function pushWithRetry(){for(let attempt=1;attempt<=4;attempt++){try{execFileSync('git',['push']);return}catch(e){console.log('Push conflict; rebasing retry '+attempt);execFileSync('git',['fetch','origin','main']);execFileSync('git',['rebase','origin/main']);}}throw new Error('Could not push generated assets after four retries');}
           async function request(url,options={}) {
             const r=await fetch(url,{...options,headers:{Authorization:'Bearer '+key,'Content-Type':'application/json',...(options.headers||{})}});
             const t=await r.text(); let data={}; try{data=t?JSON.parse(t):{}}catch{}
