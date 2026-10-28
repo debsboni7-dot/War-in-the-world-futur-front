@@ -108,7 +108,7 @@ jobs:
             execFileSync('git',['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
             execFileSync('git',['add',rigPath,budgetPath,...downloaded]);
             execFileSync('git',['commit','-m','Recover Meshy-rigged Ogo and available basic animations']);
-            execFileSync('git',['push']);
+            pushWithRetry();
           }
           async function main(){
             const recoveryId=(process.env.ISSUE_BODY||'').match(/RECOVER_RIG_TASK=([0-9a-f-]+)/i)?.[1];
@@ -158,7 +158,7 @@ jobs:
             execFileSync('git',['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
             execFileSync('git',['add',out,budgetPath]);
             execFileSync('git',['commit','-m','Add Meshy-rigged Ogo with compatible animation clips']);
-            execFileSync('git',['push']);
+            pushWithRetry();
           }
           main().catch(e=>{console.error(e);process.exit(1)});
           NODE
