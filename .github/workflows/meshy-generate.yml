@@ -47,7 +47,7 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           const raw = (process.env.ASSET_NAME || '').trim();
-          const normalized = (process.env.ISSUE_EVENT === 'true' ? raw.replace(/^\\[GENERATE3D\\]\\s*/i, '') : raw)
+          const normalized = (process.env.ISSUE_EVENT === 'true' ? raw.replace(/^\[GENERATE3D\]\s*/i, '') : raw)
             .trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70);
           if (!normalized) throw new Error('Invalid asset name; budget was not reserved.');
           const output = path.join('assets', 'models', 'generated', `${normalized}.glb`);
@@ -61,7 +61,7 @@ jobs:
           budget.reserved_credits += cost;
           budget.available_credits = budget.budget_limit_credits - budget.reserved_credits;
           budget.reservations.push({asset:normalized,credits:cost,status:'reserved',created_at:new Date().toISOString()});
-          fs.writeFileSync(budgetPath, JSON.stringify(budget, null, 2) + '\\n');
+          fs.writeFileSync(budgetPath, JSON.stringify(budget, null, 2) + '\n');
           console.log(`Reserved ${cost} credits for ${normalized}; remaining authorized budget: ${budget.available_credits}.`);
           NODE
           git config user.name "github-actions[bot]"
