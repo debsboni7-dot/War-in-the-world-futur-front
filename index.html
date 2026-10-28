@@ -441,7 +441,7 @@ energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
   d.cooldown-=dt;if(dist<2.2&&d.cooldown<=0){energy=Math.max(0,energy-8);d.cooldown=1.2;showMessage('ATTAQUE ENNEMIE · ÉNERGIE -8')}
   if(d.flash>0){
    d.flash=Math.max(0,d.flash-dt);
-   enemy.children.forEach(o=>{if(o.isMesh&&!o.userData.enemyEye&&o.material===enemyMetal&&o.position.y<2.2)o.material=d.flash>0?enemyRed:enemyMetal});
+   enemy.children.forEach(o=>{if(o.isMesh&&!o.userData.enemyEye&&(o.material===enemyMetal||o.material===enemyRed)&&o.position.y<2.2)o.material=d.flash>0?enemyRed:enemyMetal});
   }
   d.hp.quaternion.copy(camera.quaternion);
  }
