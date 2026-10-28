@@ -154,7 +154,7 @@ placeholderParts.push(part(new THREE.BoxGeometry(.3,.72,.32),suit,-.23,.4,0));
 placeholderParts.push(part(new THREE.BoxGeometry(.3,.72,.32),suit,.23,.4,0));
 const gun=new THREE.Mesh(new THREE.BoxGeometry(.14,.16,.8),new THREE.MeshStandardMaterial({color:0x252b30,metalness:.6,roughness:.4}));
 gun.position.set(.58,1.25,-.45);player.add(gun);
-let militaryModel=null, militaryMixer=null, militaryAnimations=[], weaponModel=null, weaponAnchor=null,playerMeasuredHeight=0;
+let militaryModel=null, militaryMixer=null, militaryAnimations=[], weaponModel=null, weaponAnchor=null,weaponBaseScale=1,weaponCenterOffset=new THREE.Vector3(),playerMeasuredHeight=0;
 let playerActions={},currentPlayerAction='',requestedPlayerAction='idle',currentPlayerActionHasClip=false,playerActionTimer=0,playerRigBones={},playerRigRest=new Map(),mountTransition=0,mountTransitionType='';
 function findRigBones(model){const found={};model.traverse(o=>{if(!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z0-9]/g,'');const tests={hips:/^(hips|pelvis|mixamorig:hips|bip001pelvis)/,spine:/spine|chest/,rightArm:/(rightarm|armr|mixamorig.*rightarm|bip001rupperarm)/,leftArm:/(leftarm|arml|mixamorig.*leftarm|bip001lupperarm)/,rightForearm:/(rightforearm|forearmr|mixamorig.*rightforearm|bip001rforearm)/,leftForearm:/(leftforearm|forearml|mixamorig.*leftforearm|bip001lforearm)/,rightThigh:/(rightupleg|rightthigh|thighr|mixamorig.*rightupleg|bip001rthigh)/,leftThigh:/(leftupleg|leftthigh|thighl|mixamorig.*leftupleg|bip001lthigh)/,rightLeg:/(rightleg|rightcalf|calfr|mixamorig.*rightleg|bip001rcalf)/,leftLeg:/(leftleg|leftcalf|calfl|mixamorig.*leftleg|bip001lcalf)/};for(const [k,re] of Object.entries(tests))if(!found[k]&&re.test(n))found[k]=o});playerRigBones=found;playerRigRest=new Map(Object.values(found).map(b=>[b,{x:b.rotation.x,y:b.rotation.y,z:b.rotation.z}]));}
 function choosePlayerAction(type){requestedPlayerAction=type;const patterns={idle:/idle|stand|breath/i,walk:/walk|walking/i,run:/run|sprint|jog/i,jump:/jump|leap/i,fire:/shoot|fire|attack|rifle|aim/i,reload:/reload/i,mount:/mount|get.?on|enter.?vehicle|bike.?on/i,dismount:/dismount|get.?off|exit.?vehicle|bike.?off/i,ride:/ride|motorcycle|drive|sit/i};const clip=militaryAnimations.find(a=>patterns[type]?.test(a.name));if(!clip||!militaryMixer){currentPlayerActionHasClip=false;const active=playerActions[currentPlayerAction];if(active){active.fadeOut(.12);currentPlayerAction=''}return false;}if(currentPlayerAction===clip.name){currentPlayerActionHasClip=true;return true;}const next=militaryMixer.clipAction(clip);next.reset().play();const prev=playerActions[currentPlayerAction];if(prev)next.crossFadeFrom(prev,.16,true);playerActions[clip.name]=next;currentPlayerAction=clip.name;currentPlayerActionHasClip=true;return true;}
@@ -187,7 +187,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);for(const clip of militaryAnimations){if(/idle|stand|breath|walk|run|sprint|jump|shoot|fire|attack|reload|mount|dismount|ride|motorcycle|drive|sit/i.test(clip.name))playerActions[clip.name]=militaryMixer.clipAction(clip)}const idle=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name));if(idle){playerActions[idle.name].play();currentPlayerAction=idle.name;currentPlayerActionHasClip=true;console.info('Compatible idle animation:',idle.name)}}findRigBones(model);
   if(weaponModel)attachWeaponToHand();
   window.__warPlayerModelSource=source;
- window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,weaponModelVisible:!!weaponModel?.visible,weaponWorld:(()=>{if(!weaponModel)return null;const v=new THREE.Vector3();weaponModel.getWorldPosition(v);return v.toArray()})(),rightHandWorld:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldPosition(v);return v.toArray()})(),weaponWorldBounds:(()=>{if(!weaponModel)return null;const b=new THREE.Box3().setFromObject(weaponModel);return {min:b.min.toArray(),max:b.max.toArray()}})(),ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
+ window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,weaponModelVisible:!!weaponModel?.visible,weaponWorld:(()=>{if(!weaponModel)return null;const v=new THREE.Vector3();weaponModel.getWorldPosition(v);return v.toArray()})(),rightHandWorld:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldPosition(v);return v.toArray()})(),rightHandWorldScale:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldScale(v);return v.toArray()})(),weaponWorldBounds:(()=>{if(!weaponModel)return null;const b=new THREE.Box3().setFromObject(weaponModel);return {min:b.min.toArray(),max:b.max.toArray()}})(),ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
   console.info('Playable character model loaded:',source);
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
@@ -212,14 +212,20 @@ function attachWeaponToHand(){
  if(!weaponModel)return;
  const hand=militaryModel?findRightHand(militaryModel):null;
  if(hand){
-  weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
-  // Grip offset: keep the normalized rifle close to the right palm.
-  weaponModel.position.set(.045,-.055,-.105);weaponModel.rotation.set(0,Math.PI/2,0);
+  weaponModel.parent?.remove(weaponModel);
+  // This rig's hand bone inherits a tiny scale. Compensate it so the rifle is ~0.82 m long in world space.
+  hand.updateWorldMatrix(true,false);
+  const hs=new THREE.Vector3();hand.getWorldScale(hs);
+  weaponModel.scale.set(weaponBaseScale/Math.max(.0001,hs.x),weaponBaseScale/Math.max(.0001,hs.y),weaponBaseScale/Math.max(.0001,hs.z));
+  hand.add(weaponModel);
+  // Apply the centering and palm grip in world-sized offsets despite the small inherited bone scale.
+  weaponModel.position.set((weaponCenterOffset.x+.045)/Math.max(.0001,hs.x),(weaponCenterOffset.y-.055)/Math.max(.0001,hs.y),(weaponCenterOffset.z-.105)/Math.max(.0001,hs.z));
+  weaponModel.rotation.set(0,Math.PI/2,0);
   weaponAnchor='right-hand bone';
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
   // If the character later loads, this same model is re-parented to its right hand.
-  weaponModel.parent?.remove(weaponModel);player.add(weaponModel);
+  weaponModel.parent?.remove(weaponModel);weaponModel.scale.setScalar(weaponBaseScale);player.add(weaponModel);
   weaponModel.position.set(.38,1.22,-.34);weaponModel.rotation.set(0,0,0);
   weaponAnchor=militaryModel?'fallback hand position':'player-root fallback position';
  }
@@ -234,7 +240,7 @@ function prepareWeaponModel(model){
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
   // Center the existing Meshy rifle at its grip origin and keep its length near 0.82 m.
-  const fit=.82/maxDim;model.scale.multiplyScalar(fit);model.position.set(-center.x*fit,-center.y*fit,-center.z*fit);
+  const fit=.82/maxDim;weaponBaseScale=fit;weaponCenterOffset.set(-center.x*fit,-center.y*fit,-center.z*fit);model.scale.setScalar(fit);model.position.copy(weaponCenterOffset);
   weaponModel=model;attachWeaponToHand();gun.visible=false;
  }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
