@@ -280,7 +280,7 @@ function applyEnemyDrone(template){
    visual.position.set(-center.x*scale,.82-bounds.min.y*scale,-center.z*scale);
    visual.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});
    enemy.add(visual);enemy.userData.droneVisual=visual;enemy.userData.droneBaseY=visual.position.y;
-   enemy.userData.fallbackVisual?.forEach(part=>part.visible=false);
+   enemy.userData.fallbackVisual?.forEach(part=>part.removeFromParent());enemy.userData.fallbackVisual=[];
   }catch(e){console.warn('Drone visual could not be attached; fallback enemy retained.',e)}
  }
 }
