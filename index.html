@@ -213,8 +213,8 @@ function attachWeaponToHand(){
  const hand=militaryModel?findRightHand(militaryModel):null;
  if(hand){
   weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
-  // Conservative hand grip placement; fine alignment can be tuned after a visual test.
-  weaponModel.position.set(.035,-.025,-.09);weaponModel.rotation.set(0,0,0);
+  // Grip offset: keep the normalized rifle close to the right palm.
+  weaponModel.position.set(.045,-.055,-.105);weaponModel.rotation.set(0,Math.PI/2,0);
   weaponAnchor='right-hand bone';
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
@@ -231,9 +231,11 @@ const EXISTING_MESHY_RIFLE='https://d2ol7oe51mr4n9.cloudfront.net/user_3L8BH1pH0
 function prepareWeaponModel(model){
  try{
   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);if(mat.emissive){mat.emissive.set(0x10191d);mat.emissiveIntensity=.3}mat.needsUpdate=true})});
-  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
-  model.scale.multiplyScalar(.82/Math.max(size.x,size.y,size.z));weaponModel=model;attachWeaponToHand();gun.visible=false;
+  // Center the existing Meshy rifle at its grip origin and keep its length near 0.82 m.
+  const fit=.82/maxDim;model.scale.multiplyScalar(fit);model.position.set(-center.x*fit,-center.y*fit,-center.z*fit);
+  weaponModel=model;attachWeaponToHand();gun.visible=false;
  }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
 let weaponFallbackStarted=false;
@@ -598,10 +600,8 @@ loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',templa
  motorcycle.remove(fallbackBike);const b=template.clone(true),bounds=new THREE.Box3().setFromObject(b),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  const fitScale=2.3/Math.max(.01,largest);b.scale.multiplyScalar(fitScale);b.position.set(-center.x*fitScale,-bounds.min.y*fitScale,-center.z*fitScale);motorcycle.add(b);bikeModelReady=true;
 },()=>{fallbackBike.visible=true});
-weaponPickup=null; // No ground weapon props: the equipped rifle belongs only in the soldier's hand.
-const pickupGlow=new THREE.Mesh(new THREE.TorusGeometry(.42,.055,6,18),new THREE.MeshBasicMaterial({color:0x6cf7ff}));
-pickupGlow.rotation.x=Math.PI/2;pickupGlow.position.y=.06;weaponPickup.add(pickupGlow);
-const pickupFallback=new THREE.Mesh(new THREE.BoxGeometry(.18,.15,.9),new THREE.MeshStandardMaterial({color:0x26343b,metalness:.65,roughness:.4}));pickupFallback.position.y=.35;pickupFallback.rotation.y=-.35;pickupFallback.visible=false;weaponPickup.add(pickupFallback);
+// No weapon props or pickup visuals in the world; only the rifle attached to the soldier is shown.
+weaponPickup=new THREE.Group();weaponPickup.name='disabled-ground-weapon-pickup';weaponPickup.visible=false;scene.add(weaponPickup);
 
 function closestDoor(){let best=null,bestD=Infinity;for(const d of doorInteractables){const dx=player.position.x-d.x,dz=player.position.z-d.z,dist=Math.hypot(dx,dz);if(dist<bestD){best=d;bestD=dist}}return best&&bestD<3.4?best:null}
 function updateContextActions(){
