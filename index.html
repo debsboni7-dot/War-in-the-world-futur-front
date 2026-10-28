@@ -356,8 +356,55 @@ const galleryAssets = [
  {id:'compact-vehicle-b',label:'Compact military vehicle variant',url:'assets/models/vehicles/Meshy_AI_Realistic_futuristic_compact_military_20261025_generate.fbx',format:'fbx',size:5.0,x:38,z:5},
  {id:'aircraft',label:'Futuristic fighter aircraft',url:'assets/models/generated/avion-chasse-futuriste.glb',format:'glb',size:6.0,x:36,z:-12},
  {id:'armory-structure',label:'Futuristic outpost structure variant',url:'assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',format:'fbx',size:7.0,x:0,z:-49}
-].map(asset=>({...asset,loaded:null,failed:false,nextTry:0}));
+].map(asset=>({...asset,loaded:null,failed:false,nextTry:0,impostor:null}));
 let galleryCursor=0,galleryCheckAt=0,galleryBusy=false,galleryEnabled=false;
+
+// Distance LOD: lightweight canvas impostors stand in for gallery models until the player approaches.
+// The sprites share one texture per asset family and consume far less GPU memory than full GLB/FBX meshes.
+const impostorTextures={};
+function makeImpostorTexture(kind){
+ if(impostorTextures[kind])return impostorTextures[kind];
+ const canvas=document.createElement('canvas');canvas.width=256;canvas.height=192;
+ const ctx=canvas.getContext('2d');
+ const glow=ctx.createRadialGradient(128,100,8,128,100,112);
+ glow.addColorStop(0,'rgba(52,220,255,.22)');glow.addColorStop(1,'rgba(52,220,255,0)');
+ ctx.fillStyle=glow;ctx.fillRect(0,0,256,192);
+ ctx.strokeStyle='rgba(83,225,255,.75)';ctx.lineWidth=2;
+ ctx.fillStyle='#182f3c';
+ const metal=ctx.createLinearGradient(0,45,0,155);metal.addColorStop(0,'#b7d5df');metal.addColorStop(.35,'#476b7b');metal.addColorStop(1,'#142630');
+ ctx.fillStyle=metal;
+ if(kind==='vehicle'){
+  ctx.beginPath();ctx.moveTo(25,125);ctx.lineTo(43,91);ctx.lineTo(83,75);ctx.lineTo(159,75);ctx.lineTo(201,94);ctx.lineTo(231,115);ctx.lineTo(226,137);ctx.lineTo(36,137);ctx.closePath();ctx.fill();ctx.stroke();
+  for(const x of [57,92,164,198]){ctx.beginPath();ctx.arc(x,137,13,0,Math.PI*2);ctx.fillStyle='#09141b';ctx.fill();ctx.strokeStyle='#6f9cab';ctx.stroke()}
+ }else if(kind==='aircraft'){
+  ctx.beginPath();ctx.moveTo(128,22);ctx.lineTo(143,78);ctx.lineTo(225,119);ctx.lineTo(224,134);ctx.lineTo(145,115);ctx.lineTo(139,159);ctx.lineTo(165,174);ctx.lineTo(161,181);ctx.lineTo(128,170);ctx.lineTo(95,181);ctx.lineTo(91,174);ctx.lineTo(117,159);ctx.lineTo(111,115);ctx.lineTo(32,134);ctx.lineTo(31,119);ctx.lineTo(113,78);ctx.closePath();ctx.fill();ctx.stroke();
+ }else if(kind==='structure'){
+  ctx.fillStyle='#243f4a';ctx.fillRect(37,80,182,74);ctx.fillStyle=metal;ctx.fillRect(55,53,146,35);ctx.fillRect(83,30,90,26);ctx.strokeRect(37,80,182,74);
+  for(let x=58;x<211;x+=30){ctx.fillStyle='#0c1920';ctx.fillRect(x,103,13,27)}
+ }else if(kind==='robot'){
+  ctx.fillRect(96,39,64,42);ctx.fillRect(83,83,90,55);ctx.fillRect(67,91,18,48);ctx.fillRect(171,91,18,48);ctx.fillRect(93,137,20,31);ctx.fillRect(145,137,20,31);ctx.strokeRect(96,39,64,42);ctx.strokeRect(83,83,90,55);
+  ctx.fillStyle='#58eaff';ctx.fillRect(107,55,42,5);
+ }else{
+  ctx.beginPath();ctx.moveTo(27,103);ctx.lineTo(71,103);ctx.lineTo(89,89);ctx.lineTo(190,89);ctx.lineTo(218,103);ctx.lineTo(235,103);ctx.lineTo(235,118);ctx.lineTo(27,118);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillRect(78,80,82,7);ctx.fillRect(174,91,53,5);ctx.fillStyle='#58eaff';ctx.fillRect(43,107,28,4);
+ }
+ ctx.fillStyle='rgba(91,232,255,.85)';ctx.fillRect(16,185,224,2);
+ const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;impostorTextures[kind]=tex;return tex;
+}
+function impostorKind(asset){
+ const s=(asset.id+' '+asset.label).toLowerCase();
+ if(s.includes('vehicle')||s.includes('véhicule'))return 'vehicle';
+ if(s.includes('aircraft')||s.includes('avion'))return 'aircraft';
+ if(s.includes('structure')||s.includes('outpost')||s.includes('armory'))return 'structure';
+ if(s.includes('robot')||s.includes('drone'))return 'robot';
+ return 'weapon';
+}
+function createGalleryImpostor(asset){
+ const material=new THREE.SpriteMaterial({map:makeImpostorTexture(impostorKind(asset)),transparent:true,depthWrite:false,opacity:.94});
+ const sprite=new THREE.Sprite(material);const h=Math.max(1.35,asset.size*.8);sprite.scale.set(h*1.35,h,1);
+ sprite.position.set(asset.x,h*.52,asset.z);sprite.visible=false;sprite.renderOrder=2;scene.add(sprite);asset.impostor=sprite;
+}
+galleryAssets.forEach(createGalleryImpostor);
 function disposeGalleryAsset(asset){
  if(!asset.loaded)return;
  const model=asset.loaded;scene.remove(model);
@@ -390,17 +437,21 @@ function loadGalleryAsset(asset){
  });
 }
 async function updateModelGallery(now){
- if(!galleryEnabled||now<galleryCheckAt||galleryBusy)return;galleryCheckAt=now+1200;
  const px=player.position.x,pz=player.position.z;
- const loaded=galleryAssets.find(a=>a.loaded);
- if(loaded&&Math.hypot(px-loaded.x,pz-loaded.z)>23)disposeGalleryAsset(loaded);
+ // Show a 2D impostor at distance; swap to the real 3D asset inside 16 units.
+ for(const a of galleryAssets){
+  const dist=Math.hypot(px-a.x,pz-a.z);
+  if(a.impostor)a.impostor.visible=dist<68&&dist>=13&&!a.loaded;
+  if(a.loaded&&dist>23)disposeGalleryAsset(a);
+ }
+ if(!galleryEnabled||now<galleryCheckAt||galleryBusy)return;galleryCheckAt=now+700;
  if(galleryAssets.some(a=>a.loaded))return;
  let best=null,bestDist=16;
  for(let i=0;i<galleryAssets.length;i++){
   const idx=(galleryCursor+i)%galleryAssets.length,a=galleryAssets[idx],dist=Math.hypot(px-a.x,pz-a.z);
   if(!a.failed&&now>=a.nextTry&&dist<bestDist){best=a;bestDist=dist}
  }
- if(best){galleryCursor=(galleryAssets.indexOf(best)+1)%galleryAssets.length;await loadGalleryAsset(best);if(best.loaded)showMessage('Modèle chargé : '+best.label)}
+ if(best){galleryCursor=(galleryAssets.indexOf(best)+1)%galleryAssets.length;await loadGalleryAsset(best);if(best.loaded&&best.impostor)best.impostor.visible=false;if(best.loaded)showMessage('Modèle chargé : '+best.label)}
 }
 setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updateModelGallery(performance.now())},8000);
 
