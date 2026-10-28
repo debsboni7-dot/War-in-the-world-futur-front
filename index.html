@@ -105,7 +105,7 @@ function reloadWeapon(){if(ammo>=30){showMessage('Chargeur déjà plein');return
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
  ammo--;updateAmmoDisplay();shots++;triggerWeaponVFX();
- const ray=new THREE.Raycaster();ray.far=90;const shotOrigin=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
+ const ray=new THREE.Raycaster();ray.far=90;ray.setFromCamera(new THREE.Vector2(0,0),camera);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
  if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
@@ -395,7 +395,7 @@ for (let i=0;i<18;i++) {
 }
 let vfxClock = 0;
 function triggerWeaponVFX() {
-  const muzzle = new THREE.Vector3(.58,1.25,-.92).applyAxisAngle(new THREE.Vector3(0,1,0), yaw).add(player.position);
+  const muzzle = new THREE.Vector3(.48,1.22,-.62).applyAxisAngle(new THREE.Vector3(0,1,0), playerYaw).add(player.position);
   // Strong, visible test flash plus a short forward tracer so FIRE always has a visible result.
   muzzleFlash.position.copy(muzzle); muzzleFlash.scale.set(2.8,2.8,3.6); flashMat.opacity=1; vfxClock=.18;
   muzzleFlash.visible=true;
@@ -408,7 +408,7 @@ function triggerWeaponVFX() {
   }
 }
 
-let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,aiming=false,jumpVelocity=0,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
+let yaw=0,playerYaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,aiming=false,jumpVelocity=0,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
 function setStick(e){stickRect=stick.getBoundingClientRect();const dx=e.clientX-(stickRect.left+stickRect.width/2),dy=e.clientY-(stickRect.top+stickRect.height/2),max=35,len=Math.hypot(dx,dy)||1;moveX=dx/Math.max(max,len);moveY=dy/Math.max(max,len);knob.style.left=(50+moveX*32)+'%';knob.style.top=(50+moveY*32)+'%'}
@@ -434,8 +434,9 @@ const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>
  const nx=player.position.x+forward.x*(-iy*speed)+right.x*(ix*speed),nz=player.position.z+forward.z*(-iy*speed)+right.z*(ix*speed);
  if(!isBlocked(nx,player.position.z))player.position.x=THREE.MathUtils.clamp(nx,-95,95);
  if(!isBlocked(player.position.x,nz))player.position.z=THREE.MathUtils.clamp(nz,-95,95);
- player.rotation.y=yaw;
-const target=new THREE.Vector3(player.position.x,player.position.y+1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*(aiming?4.5:7),aiming?2.6:3.4,Math.cos(yaw)*(aiming?4.5:7));camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
+ if(mag>.08){const worldMoveX=forward.x*(-iy)+right.x*ix,worldMoveZ=forward.z*(-iy)+right.z*ix;playerYaw=Math.atan2(-worldMoveX,-worldMoveZ)}
+ player.rotation.y=playerYaw;
+const target=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);const shoulder=aiming?.58:.82,backDistance=aiming?3.6:5.6;const back=new THREE.Vector3(Math.sin(yaw)*backDistance,aiming?1.45:2.15,Math.cos(yaw)*backDistance);const shoulderOffset=new THREE.Vector3(Math.cos(yaw)*shoulder,0,-Math.sin(yaw)*shoulder);camera.position.lerp(target.clone().add(back).add(shoulderOffset),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.15,0)));
 energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
  for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;if(d.droneVisual)d.droneVisual.position.y=d.droneBaseY+Math.sin(now*.004+enemy.position.x)*.075;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
   if(dist>2.3&&dist<42){const step=dt*.8,ex=enemy.position.x+(dx/dist)*step,ez=enemy.position.z+(dz/dist)*step;if(!isBlocked(ex,enemy.position.z))enemy.position.x=THREE.MathUtils.clamp(ex,-95,95);if(!isBlocked(enemy.position.x,ez))enemy.position.z=THREE.MathUtils.clamp(ez,-95,95)}
