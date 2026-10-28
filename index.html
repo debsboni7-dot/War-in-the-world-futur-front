@@ -535,7 +535,7 @@ loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',t
   const m=template.clone(true);m.scale.setScalar(scale);if(alongX)m.rotation.y=Math.PI/2;
   m.position.set(0,.02,-8-i*10);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);roadSegments.push(m);
  }
-});
+},()=>{roadSegments.forEach(m=>m.visible=true)});
 motorcycle=new THREE.Group();motorcycle.position.set(7,0,3);scene.add(motorcycle);
 const fallbackBike=makeMotorcycleFallback();fallbackBike.visible=false;motorcycle.add(fallbackBike);
 loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',template=>{
@@ -545,11 +545,11 @@ loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',templa
 weaponPickup=new THREE.Group();weaponPickup.position.set(4.2,0,2.5);scene.add(weaponPickup);
 const pickupGlow=new THREE.Mesh(new THREE.TorusGeometry(.42,.055,6,18),new THREE.MeshBasicMaterial({color:0x6cf7ff}));
 pickupGlow.rotation.x=Math.PI/2;pickupGlow.position.y=.06;weaponPickup.add(pickupGlow);
-const pickupFallback=new THREE.Mesh(new THREE.BoxGeometry(.18,.15,.9),new THREE.MeshStandardMaterial({color:0x26343b,metalness:.65,roughness:.4}));pickupFallback.position.y=.35;pickupFallback.rotation.y=-.35;weaponPickup.add(pickupFallback);
+const pickupFallback=new THREE.Mesh(new THREE.BoxGeometry(.18,.15,.9),new THREE.MeshStandardMaterial({color:0x26343b,metalness:.65,roughness:.4}));pickupFallback.position.y=.35;pickupFallback.rotation.y=-.35;pickupFallback.visible=false;weaponPickup.add(pickupFallback);
 loadReusableGLB('assets/models/generated/railgun-electromagnetique.glb',template=>{
  weaponPickup.remove(pickupFallback);const m=template.clone(true),bounds=new THREE.Box3().setFromObject(m),size=bounds.getSize(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  m.scale.setScalar(.9/Math.max(.01,largest));m.position.y=.25;weaponPickup.add(m);
-});
+},()=>{pickupFallback.visible=true});
 function closestDoor(){let best=null,bestD=Infinity;for(const d of doorInteractables){const dx=player.position.x-d.x,dz=player.position.z-d.z,dist=Math.hypot(dx,dz);if(dist<bestD){best=d;bestD=dist}}return best&&bestD<3.4?best:null}
 function updateContextActions(){
  const distBike=Math.hypot(player.position.x-motorcycle.position.x,player.position.z-motorcycle.position.z);
