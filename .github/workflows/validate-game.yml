@@ -39,7 +39,9 @@ jobs:
             ['camera shoulder offset', /const shoulder=aiming\s*\?\s*1\.05\s*:\s*1\.2/],
             ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/],
             ['instanced forest geometry', /new THREE\.InstancedMesh\(tree(?:Trunk|Crown)Geometry,tree(?:Trunk|Crown)Material,treeCount\)/],
-            ['reduced mobile render scale', /isLowMemoryPhone\?0\.7:0\.9/]
+            ['instanced outpost structures', /new THREE\.InstancedMesh\(new THREE\.BoxGeometry\(4,2\.5,3\)/],
+            ['adaptive render scale for 29 FPS target', /measuredFps<29[\s\S]*renderScale-.05/],
+            ['reduced mobile render scale', /isLowMemoryPhone\?0\.55:0\.78/]
           ];
           for (const [label, pattern] of requiredCameraRules) if (!pattern.test(html)) throw new Error('Camera/gameplay regression: ' + label);
           console.log('Verified independent player facing, shoulder camera, and crosshair-aligned shots.');
