@@ -1,7 +1,7 @@
 {
   "budget_limit_credits": 200,
-  "reserved_credits": 110,
-  "available_credits": 90,
+  "reserved_credits": 140,
+  "available_credits": 60,
   "policy": "Hard cap for this authorized Meshy budget. Current completed Meshy 6 Lite asset is conservatively recorded at 20 credits (5 mesh + 15 texture per current API pricing). Every future generation reserves 30 credits before submitting (20 expected + 10 safety margin). Do not start if the reservation would exceed 200. Failed/refunded tasks remain reserved conservatively unless reconciled from Meshy usage records.",
   "reservations": [
     {
@@ -38,6 +38,12 @@
       "mesh_task_id": "01a182f9-249f-71e0-a6ad-503d878b4306",
       "texture_task_id": "01a182f9-dd71-7441-9571-4a75b96e5a01",
       "completed_at": "2026-10-28T14:47:31.861Z"
+    },
+    {
+      "asset": "ogo-player-character",
+      "credits": 30,
+      "status": "reserved",
+      "created_at": "2026-10-28T14:49:14.270Z"
     }
   ],
   "future_reservation_credits": 30
