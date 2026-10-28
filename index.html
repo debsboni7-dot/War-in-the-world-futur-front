@@ -302,6 +302,80 @@ setTimeout(async()=>{
  if(!robot&&!isLowMemoryPhone)await loadWorldFBX('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',{x:-7,y:0,z:-7},2.1,'combat robot fallback',10.1);
 },2600);
 
+// Additional repository assets are streamed as the player approaches their display points.
+// Only one gallery model is resident at a time, so the full asset library can be used on phones
+// without downloading and decoding every large FBX/GLB at startup.
+const galleryAssets = [
+ {id:'pulse-rifle',label:'Pulse rifle',url:'assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_pulse_20261025_generate.fbx',format:'fbx',size:2.1,x:-22,z:12},
+ {id:'combat-knife',label:'Combat knife',url:'assets/models/generated/couteau-combat.glb',format:'glb',size:1.0,x:-15,z:16},
+ {id:'railgun',label:'Electromagnetic railgun',url:'assets/models/generated/railgun-electromagnetique.glb',format:'glb',size:2.4,x:-7,z:17},
+ {id:'rotary-cannon',label:'Rotary cannon',url:'assets/models/weapons/Meshy_AI_Create_a_realistic_futuristic_rotary_20261025_generate.fbx',format:'fbx',size:2.3,x:2,z:17},
+ {id:'energy-pistol',label:'Energy pistol',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_energy_pistol_for_a_20261025_generate.fbx',format:'fbx',size:1.1,x:11,z:16},
+ {id:'heavy-machine-gun',label:'Heavy machine gun',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_heavy_machine_gun_20261025_generate.fbx',format:'fbx',size:2.2,x:20,z:12},
+ {id:'laser-rifle',label:'Laser rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_laser_rifle_with_20261025_generate.fbx',format:'fbx',size:2.0,x:28,z:6},
+ {id:'assault-rifle',label:'Military assault rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_military_assault_20261025_generate.fbx',format:'fbx',size:2.0,x:31,z:-4},
+ {id:'sniper-rifle',label:'Military sniper rifle',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_military_sniper_20261025_generate.fbx',format:'fbx',size:2.2,x:28,z:-14},
+ {id:'animated-weapon-a',label:'Animated weapon prototype A',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations.glb',format:'glb',size:2.0,x:20,z:-23},
+ {id:'animated-weapon-b',label:'Animated weapon prototype B',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__All_Animations (1).glb',format:'glb',size:2.0,x:10,z:-31},
+ {id:'weapon-texture-a',label:'Futuristic weapon prototype A',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027063641_texture.glb',format:'glb',size:2.0,x:0,z:-37},
+ {id:'weapon-texture-b',label:'Futuristic weapon prototype B',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027064817_texture.glb',format:'glb',size:2.0,x:-10,z:-37},
+ {id:'weapon-prototype-c',label:'Futuristic weapon prototype C',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic__1027070357_generate.glb',format:'glb',size:2.0,x:-20,z:-31},
+ {id:'shotgun-fbx',label:'Combat shotgun FBX variant',url:'assets/models/weapons/Meshy_AI_Realistic_futuristic_combat_shotgun_with_20261025_generate.fbx',format:'fbx',size:2.0,x:-29,z:-22},
+ {id:'compact-vehicle-a',label:'Compact military vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_compact_futuristic_military_20261025_generate.fbx',format:'fbx',size:5.2,x:-36,z:-9},
+ {id:'amphibious-vehicle',label:'Amphibious combat vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_amphibious_20261025_generate.fbx',format:'fbx',size:6.2,x:-37,z:5},
+ {id:'heavy-vehicle',label:'Heavy combat vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_heavy_20261025_generate.fbx',format:'fbx',size:5.8,x:-35,z:21},
+ {id:'self-propelled-vehicle',label:'Self-propelled military vehicle',url:'assets/models/vehicles/Meshy_AI_Create_a_realistic_futuristic_self_20261025_generate.fbx',format:'fbx',size:5.5,x:37,z:19},
+ {id:'compact-vehicle-b',label:'Compact military vehicle variant',url:'assets/models/vehicles/Meshy_AI_Realistic_futuristic_compact_military_20261025_generate.fbx',format:'fbx',size:5.0,x:38,z:5},
+ {id:'aircraft',label:'Futuristic fighter aircraft',url:'assets/models/generated/avion-chasse-futuriste.glb',format:'glb',size:6.0,x:36,z:-12},
+ {id:'armory-structure',label:'Futuristic outpost structure variant',url:'assets/models/structures/Meshy_AI_Create_a_realistic_futuristic_20261025_generate.fbx',format:'fbx',size:7.0,x:0,z:-49}
+].map(asset=>({...asset,loaded:null,failed:false,nextTry:0}));
+let galleryCursor=0,galleryCheckAt=0,galleryBusy=false;
+function disposeGalleryAsset(asset){
+ if(!asset.loaded)return;
+ const model=asset.loaded;scene.remove(model);
+ model.traverse(o=>{if(o.isMesh){o.geometry?.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{if(m?.userData?.runtimeFallback)m.map=null;m?.dispose?.()})}});
+ asset.loaded=null;asset.failed=false;
+}
+function loadGalleryAsset(asset){
+ return new Promise(resolve=>{
+  if(galleryBusy||asset.loaded||asset.failed||performance.now()<asset.nextTry)return resolve(null);
+  const Loader=asset.format==='glb'?GLTFLoader:FBXLoader;
+  if(!Loader){asset.failed=true;return resolve(null)}
+  galleryBusy=true;
+  const finish=(model)=>{
+   galleryBusy=false;
+   if(!model){asset.nextTry=performance.now()+30000;asset.failed=true;return resolve(null)}
+   try{
+    const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
+    if(!Number.isFinite(largest)||largest<.001)throw new Error('Empty model bounds');
+    model.scale.setScalar(asset.size/largest);
+    model.position.set(asset.x-center.x*model.scale.x,.04-bounds.min.y*model.scale.y,asset.z-center.z*model.scale.z);
+    model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(mat&&!mat.map){mat.map=metalTex;mat.userData=mat.userData||{};mat.userData.runtimeFallback=true}if(mat){mat.roughness=Math.max(.5,mat.roughness??.75);mat.needsUpdate=true}})}});
+    model.userData.galleryAssetId=asset.id;scene.add(model);asset.loaded=model;asset.failed=false;asset.nextTry=performance.now()+20000;
+    console.info('Gallery model loaded:',asset.label);resolve(model);
+   }catch(e){console.warn('Gallery model rejected:',asset.label,e);asset.failed=true;asset.nextTry=performance.now()+30000;resolve(null)}
+  };
+  try{
+   if(asset.format==='glb')new GLTFLoader().load(asset.url,gltf=>finish(gltf.scene),undefined,e=>{console.warn('Gallery GLB failed:',asset.label,e);finish(null)});
+   else new FBXLoader().load(asset.url,finish,undefined,e=>{console.warn('Gallery FBX failed:',asset.label,e);finish(null)});
+  }catch(e){console.warn('Gallery loader threw:',asset.label,e);finish(null)}
+ });
+}
+async function updateModelGallery(now){
+ if(now<galleryCheckAt||galleryBusy)return;galleryCheckAt=now+1200;
+ const px=player.position.x,pz=player.position.z;
+ const loaded=galleryAssets.find(a=>a.loaded);
+ if(loaded&&Math.hypot(px-loaded.x,pz-loaded.z)>48)disposeGalleryAsset(loaded);
+ if(galleryAssets.some(a=>a.loaded))return;
+ let best=null,bestDist=34;
+ for(let i=0;i<galleryAssets.length;i++){
+  const idx=(galleryCursor+i)%galleryAssets.length,a=galleryAssets[idx],dist=Math.hypot(px-a.x,pz-a.z);
+  if(!a.failed&&now>=a.nextTry&&dist<bestDist){best=a;bestDist=dist}
+ }
+ if(best){galleryCursor=(galleryAssets.indexOf(best)+1)%galleryAssets.length;await loadGalleryAsset(best);if(best.loaded)showMessage('Modèle chargé : '+best.label)}
+}
+setTimeout(()=>{if(FBXLoader||GLTFLoader)updateModelGallery(performance.now())},8000);
+
 // Reusable low-cost muzzle flash and pooled particles (no per-shot geometry allocation).
 const vfxGroup = new THREE.Group(); scene.add(vfxGroup);
 const flashMat = new THREE.MeshBasicMaterial({color:0xffd36a, transparent:true, opacity:0, depthWrite:false});
@@ -347,7 +421,7 @@ const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
 function isBlocked(x,z){for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}return false}
-function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>0){player.position.y+=jumpVelocity*dt;jumpVelocity-=15*dt;if(player.position.y<=0){player.position.y=0;jumpVelocity=0}}const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
 
