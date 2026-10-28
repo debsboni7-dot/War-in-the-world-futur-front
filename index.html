@@ -173,20 +173,21 @@ if(FBXLoader){
  },undefined,e=>{console.warn('Military FBX failed; placeholder retained.',e);showMessage('FBX soldier failed — visible fallback active')});
 }
 function attachWeaponToHand(){
- if(!weaponModel||!militaryModel)return;
- const hand=findRightHand(militaryModel);
+ if(!weaponModel)return;
+ const hand=militaryModel?findRightHand(militaryModel):null;
  if(hand){
   weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
   // Conservative hand grip placement; fine alignment can be tuned after a visual test.
   weaponModel.position.set(.04,-.025,-.12);weaponModel.rotation.set(0,Math.PI/2,0);
   weaponAnchor='right-hand bone';
  }else{
+  // Attach to the movement root immediately, even if the character FBX is still loading.
+  // If the character later loads, this same model is re-parented to its right hand.
   weaponModel.parent?.remove(weaponModel);player.add(weaponModel);
   weaponModel.position.set(.38,1.22,-.34);weaponModel.rotation.set(0,0,0);
-  weaponAnchor='fallback hand position';
+  weaponAnchor=militaryModel?'fallback hand position':'player-root fallback position';
  }
- // The fallback weapon is shown only if loading/attachment failed; avoid double weapons.
-  gun.visible=false;console.info('Weapon attached:',weaponAnchor);
+ gun.visible=false;console.info('Weapon attached:',weaponAnchor);
 }
 // The tactical pump-action shotgun is the active weapon. Prefer its Meshy PBR GLB;
  // retain the existing rotary FBX only as a fallback if the textured GLB is unavailable.
