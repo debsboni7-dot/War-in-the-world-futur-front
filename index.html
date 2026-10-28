@@ -228,7 +228,7 @@ function loadWorldFBX(url, position, targetSize, label, maxBytesHint) {
         const largest = Math.max(size.x, size.y, size.z);
         if (!Number.isFinite(largest) || largest < 0.001) return resolve(null);
         model.scale.setScalar(targetSize / largest);
-        model.position.set(position.x-center.x*model.scale.x, position.y-center.y*model.scale.y, position.z-center.z*model.scale.z);
+        model.position.set(position.x-center.x*model.scale.x, position.y-bounds.min.y*model.scale.y, position.z-center.z*model.scale.z);
         model.traverse(o => {
           if (!o.isMesh) return;
           o.frustumCulled = true;
@@ -335,7 +335,7 @@ let galleryCursor=0,galleryCheckAt=0,galleryBusy=false,galleryEnabled=false;
 function disposeGalleryAsset(asset){
  if(!asset.loaded)return;
  const model=asset.loaded;scene.remove(model);
- model.traverse(o=>{if(o.isMesh){o.geometry?.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{if(m?.userData?.runtimeFallback)m.map=null;m?.dispose?.()})}});
+ model.traverse(o=>{if(o.isMesh){o.geometry?.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{if(!m)return;for(const key of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap','alphaMap','bumpMap','displacementMap','lightMap']){const tex=m[key];if(tex&&tex!==metalTex&&tex!==groundTex&&tex!==foliageTex&&tex!==barkTex&&tex!==concreteTex)tex.dispose()}if(m.userData?.runtimeFallback)m.map=null;m.dispose()})}});
  asset.loaded=null;asset.failed=false;
 }
 function loadGalleryAsset(asset){
