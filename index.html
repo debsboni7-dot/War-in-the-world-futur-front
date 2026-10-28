@@ -109,7 +109,7 @@ function shootHostile(){
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
  triggerWeaponVFX(hit?hit.point:ray.ray.origin.clone().addScaledVector(ray.ray.direction,22));
- if(hit){let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
+ if(hit){spawnImpactVFX(hit.point);let target=hit.object;while(target.parent&&!enemies.includes(target))target=target.parent;
   if(enemies.includes(target)){const d=target.userData;d.health=Math.max(0,d.health-34);d.flash=.13;const fill=d.hp.userData.fill;fill.scale.x=Math.max(.001,d.health/d.maxHealth);fill.position.x=-(1-d.health/d.maxHealth)*.48;
    if(d.health<=0){d.dead=true;target.visible=false;updateEnemyCounter();showMessage('CIBLE NEUTRALISÉE')}else showMessage('IMPACT CONFIRMÉ')}
  }else showMessage('TIR · ajuste le viseur');
@@ -678,7 +678,7 @@ vfxGroup.add(muzzleFlash,muzzleLight);
 const tracerGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
 const tracerMaterial=new THREE.LineBasicMaterial({color:0xffed9a,transparent:true,opacity:1,depthWrite:false});
 const bulletTracer=new THREE.Line(tracerGeometry,tracerMaterial);bulletTracer.visible=false;vfxGroup.add(bulletTracer);let tracerLife=0;
-const bulletProjectile=new THREE.Mesh(new THREE.SphereGeometry(.065,8,6),new THREE.MeshBasicMaterial({color:0xffe18a}));bulletProjectile.visible=false;vfxGroup.add(bulletProjectile);const bulletVelocity=new THREE.Vector3();let bulletLife=0;
+const bulletProjectile=new THREE.Mesh(new THREE.SphereGeometry(.065,8,6),new THREE.MeshBasicMaterial({color:0xffe18a}));bulletProjectile.scale.set(.22,.22,1.25);bulletProjectile.visible=false;vfxGroup.add(bulletProjectile);const bulletVelocity=new THREE.Vector3();let bulletLife=0;
 const particleGeometry = new THREE.SphereGeometry(.035,4,3);
 const particleMaterial = new THREE.MeshBasicMaterial({color:0xff9b3d, transparent:true, opacity:.9, depthWrite:false});
 const particles = [];
@@ -688,6 +688,19 @@ for (let i=0;i<18;i++) {
   particles.push({mesh,life:0,velocity:new THREE.Vector3()});
 }
 let vfxClock = 0;
+function spawnImpactVFX(point){
+  // Reuse the existing particle pool; no per-impact meshes or geometries are allocated.
+  let used=0;
+  for(const p of particles){
+    if(p.life>0)continue;
+    p.mesh.position.copy(point).add(new THREE.Vector3((Math.random()-.5)*.12,(Math.random()-.5)*.12,(Math.random()-.5)*.12));
+    p.mesh.scale.setScalar(.7+Math.random()*1.5);
+    p.mesh.material.color.setHex(Math.random()<.55?0xffd27a:0xff8b38);
+    p.mesh.material.opacity=1;p.life=.12+Math.random()*.13;p.mesh.visible=true;
+    p.velocity.set((Math.random()-.5)*7,1+Math.random()*5,(Math.random()-.5)*7);
+    if(++used>=9)break;
+  }
+}
 function triggerWeaponVFX(targetPoint=null) {
   playGunshotSFX();
   const muzzle = new THREE.Vector3(),weaponForward=new THREE.Vector3(0,0,-1),weaponQuaternion=new THREE.Quaternion();
@@ -783,7 +796,7 @@ energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
  const phase=now*.009*(sprinting||keys.shift?1.65:1);if(!currentPlayerActionHasClip)for(const [name,bone] of Object.entries(playerRigBones)){const rest=playerRigRest.get(bone);if(!rest)continue;bone.rotation.set(rest.x,rest.y,rest.z);if(mountTransition>0){const mounting=mountTransitionType==='mount';if(name==='hips')bone.rotation.x=rest.x+(mounting?-.28:.18);if(name==='rightArm')bone.rotation.x=rest.x+(mounting?-.7:-.15);if(name==='leftArm')bone.rotation.x=rest.x+(mounting?-.6:-.12);if(name==='rightThigh')bone.rotation.x=rest.x+(mounting?-.7:.3);if(name==='leftThigh')bone.rotation.x=rest.x+(mounting?-.25:.45)}else if(playerActionTimer>0&&requestedPlayerAction==='fire'){if(name==='rightArm')bone.rotation.x=rest.x-.75;if(name==='rightForearm')bone.rotation.x=rest.x-.35;if(name==='leftArm')bone.rotation.x=rest.x-.5}else if(playerActionTimer>0&&requestedPlayerAction==='reload'){if(name==='rightArm')bone.rotation.x=rest.x-.95;if(name==='rightForearm')bone.rotation.x=rest.x-.5;if(name==='leftArm')bone.rotation.x=rest.x-.25}else if(player.position.y>.05){if(name==='rightThigh'||name==='leftThigh')bone.rotation.x=rest.x-.35;if(name==='rightArm'||name==='leftArm')bone.rotation.x=rest.x-.4;if(name==='rightLeg'||name==='leftLeg')bone.rotation.x=rest.x+.2}else if(ridingBike){if(name==='rightThigh'||name==='leftThigh')bone.rotation.x=rest.x-1.0;if(name==='rightLeg'||name==='leftLeg')bone.rotation.x=rest.x+1.0;if(name==='rightArm'||name==='leftArm')bone.rotation.x=rest.x-.55;if(name==='rightForearm'||name==='leftForearm')bone.rotation.x=rest.x-.25}else if(movingNow){if(name==='rightThigh')bone.rotation.x=rest.x+Math.sin(phase)*.55;if(name==='leftThigh')bone.rotation.x=rest.x-Math.sin(phase)*.55;if(name==='rightLeg')bone.rotation.x=rest.x+Math.max(0,-Math.sin(phase))*.45;if(name==='leftLeg')bone.rotation.x=rest.x+Math.max(0,Math.sin(phase))*.45;if(name==='leftArm')bone.rotation.x=rest.x-Math.sin(phase)*.35;if(name==='rightArm')bone.rotation.x=rest.x+Math.sin(phase)*.18}else{if(name==='spine')bone.rotation.x=rest.x+Math.sin(now*.002)*.025;if(name==='rightArm'||name==='leftArm')bone.rotation.z=rest.z+Math.sin(now*.0015+(name==='rightArm'?0:1))* .025}}
  if(tracerLife>0){tracerLife=Math.max(0,tracerLife-dt);tracerMaterial.opacity=tracerLife/.13;bulletTracer.visible=tracerLife>0}else bulletTracer.visible=false;
  if(bulletLife>0){bulletLife=Math.max(0,bulletLife-dt);bulletProjectile.position.addScaledVector(bulletVelocity,dt);bulletProjectile.visible=bulletLife>0}else bulletProjectile.visible=false;
- if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94);muzzleLight.intensity=7*(vfxClock/.18);muzzleLight.visible=vfxClock>0}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
+ if(vfxClock>0){vfxClock=Math.max(0,vfxClock-dt);flashMat.opacity=vfxClock/.18;muzzleFlash.scale.multiplyScalar(.94);muzzleLight.intensity=7*(vfxClock/.18);muzzleLight.visible=vfxClock>0}for(const p of particles){if(p.life<=0)continue;p.life-=dt;p.mesh.position.addScaledVector(p.velocity,dt);p.velocity.y-=2.8*dt;p.mesh.material.opacity=Math.max(0,p.life/.38);p.mesh.scale.multiplyScalar(.985);p.mesh.visible=p.life>0}renderer.render(scene,camera)}
 placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Field test ready. Ogo, explore le champ de bataille.');requestAnimationFrame(animate);
 </script>
 </body></html>
