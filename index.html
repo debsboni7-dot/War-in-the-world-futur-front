@@ -412,15 +412,17 @@ let yaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,aiming=false,jumpVelocity=0
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
 function setStick(e){stickRect=stick.getBoundingClientRect();const dx=e.clientX-(stickRect.left+stickRect.width/2),dy=e.clientY-(stickRect.top+stickRect.height/2),max=35,len=Math.hypot(dx,dy)||1;moveX=dx/Math.max(max,len);moveY=dy/Math.max(max,len);knob.style.left=(50+moveX*32)+'%';knob.style.top=(50+moveY*32)+'%'}
-stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setStick(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setStick(e)});function endStick(){stickId=null;moveX=moveY=0;knob.style.left='50%';knob.style.top='50%'}stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);
-let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);
-document.querySelector('#run').addEventListener('pointerdown',()=>sprinting=true);for(const ev of ['pointerup','pointercancel','pointerleave'])document.querySelector('#run').addEventListener(ev,()=>sprinting=false);
+stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setStick(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setStick(e)});function endStick(){stickId=null;moveX=moveY=0;knob.style.left='50%';knob.style.top='50%'}stick.addEventListener('pointerup',endStick);stick.addEventListener('pointercancel',endStick);stick.addEventListener('lostpointercapture',endStick);
+let lookId=null,prevX=0,prevY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.28&&e.clientY>innerHeight*.55)return;lookId=e.pointerId;prevX=e.clientX;prevY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-prevX)*.004;pitch=Math.max(-.65,Math.min(.32,pitch-(e.clientY-prevY)*.003));prevX=e.clientX;prevY=e.clientY});function endLook(e){if(e.pointerId===lookId)lookId=null}renderer.domElement.addEventListener('pointerup',endLook);renderer.domElement.addEventListener('pointercancel',endLook);renderer.domElement.addEventListener('lostpointercapture',endLook);
+const runButton=document.querySelector('#run');runButton.addEventListener('pointerdown',e=>{e.preventDefault();sprinting=true;try{runButton.setPointerCapture(e.pointerId)}catch(_){}});for(const ev of ['pointerup','pointercancel','pointerleave','lostpointercapture'])runButton.addEventListener(ev,()=>sprinting=false);
 document.querySelector('#aim').addEventListener('click',()=>{aiming=!aiming;camera.fov=aiming?46:65;camera.updateProjectionMatrix();document.querySelector('#aim').classList.toggle('active',aiming);showMessage(aiming?'Visée activée':'Visée désactivée')});
 document.querySelector('#jump').addEventListener('pointerdown',e=>{e.preventDefault();if(player.position.y<=.015){jumpVelocity=6.2;showMessage('Saut')}});
 document.querySelector('#reload').addEventListener('pointerdown',e=>{e.preventDefault();reloadWeapon()});
 document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shootHostile()});
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.85:1.1));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
-addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r')reloadWeapon()});
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&!e.repeat)reloadWeapon()});
+function resetTouchControls(){sprinting=false;endStick();lookId=null}
+addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
@@ -436,7 +438,7 @@ const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>
 const target=new THREE.Vector3(player.position.x,player.position.y+1.6,player.position.z);const back=new THREE.Vector3(Math.sin(yaw)*(aiming?4.5:7),aiming?2.6:3.4,Math.cos(yaw)*(aiming?4.5:7));camera.position.lerp(target.clone().add(back),1-Math.pow(.001,dt));camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*5-0.2,0)));
 energy=Math.max(0,Math.min(100,energy+(sprinting&&mag>.1?-dt*5:dt*2)));
  for(const enemy of enemies){const d=enemy.userData;if(d.dead)continue;if(d.droneVisual)d.droneVisual.position.y=d.droneBaseY+Math.sin(now*.004+enemy.position.x)*.075;const dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);
-  if(dist>2.3&&dist<42){enemy.position.x+=dx/dist*dt*.8;enemy.position.z+=dz/dist*dt*.8}
+  if(dist>2.3&&dist<42){const step=dt*.8,ex=enemy.position.x+(dx/dist)*step,ez=enemy.position.z+(dz/dist)*step;if(!isBlocked(ex,enemy.position.z))enemy.position.x=THREE.MathUtils.clamp(ex,-95,95);if(!isBlocked(enemy.position.x,ez))enemy.position.z=THREE.MathUtils.clamp(ez,-95,95)}
   if(dist>.01)enemy.rotation.y=Math.atan2(-dx,-dz);
   d.cooldown-=dt;if(dist<2.2&&d.cooldown<=0){energy=Math.max(0,energy-8);d.cooldown=1.2;showMessage('ATTAQUE ENNEMIE · ÉNERGIE -8')}
   if(d.flash>0){
