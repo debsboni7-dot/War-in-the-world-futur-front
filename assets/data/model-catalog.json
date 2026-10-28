@@ -1,9 +1,9 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
-  "version": 5,
-  "status": "city-collision-and-player-rig-pipeline-in-progress",
+  "version": 6,
+  "status": "rigged-ogo-city-interactions-implemented-visual-verification-pending",
   "updatedAt": "2026-10-28",
-  "note": "The live scene no longer renders forest trees or the scattered weapon gallery. City buildings and doors have collision/interaction logic; a visible bullet tracer and visible seated rider are wired in. Meshy Ogo rigging + compatible animation clips is now queued through GitHub Actions. Visual quality, rig deformation and real Samsung-device performance still require post-generation/browser verification.",
+  "note": "Removed all tree meshes and the scattered weapon showcase from the live scene. Ogo now prefers the Meshy-rigged GLB and loads Meshy's basic walking/running animation GLBs when available; other actions use named clips only when present, with procedural pose fallbacks. Meshy rigging succeeded; the separate multi-action animation task was blocked by the API key credit limit, so no extra paid task was retried. City building/door collisions, door interactions, visible bullet tracer and visible rider are implemented. Visual inspection and real Samsung-device performance remain unverified.",
   "mobilePolicy": {
     "loadAllAtStartup": false,
     "streamGalleryOneModelAtATime": true,
@@ -601,14 +601,49 @@
       "label": "Ogo humanoid with Meshy rig and action clips",
       "source": "assets/models/generated/ogo-player-character-rigged-animated.glb",
       "format": "glb",
-      "runtimeReady": false,
+      "runtimeReady": true,
       "loadStrategy": "preferred player model; fallback to Ogo base GLB",
       "validation": {
-        "filePresent": false,
+        "filePresent": true,
         "geometryParsed": false,
         "visualInspection": false,
         "texturesVerified": false,
         "rigAndAnimationClipsVerified": false,
+        "devicePerformanceVerified": false
+      },
+      "sizeBytes": 7117984
+    },
+    {
+      "id": "ogo-walking-meshy",
+      "category": "character-animation",
+      "label": "ogo-walking-meshy",
+      "source": "assets/models/generated/ogo-walking-meshy.glb",
+      "format": "glb",
+      "sizeBytes": 7098828,
+      "runtimeReady": true,
+      "loadStrategy": "loaded with rigged Ogo at startup",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "animationRetargetVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "ogo-running-meshy",
+      "category": "character-animation",
+      "label": "ogo-running-meshy",
+      "source": "assets/models/generated/ogo-running-meshy.glb",
+      "format": "glb",
+      "sizeBytes": 7088208,
+      "runtimeReady": true,
+      "loadStrategy": "loaded with rigged Ogo at startup",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "animationRetargetVerified": false,
         "devicePerformanceVerified": false
       }
     }
