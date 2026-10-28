@@ -525,10 +525,18 @@ function makeMotorcycleFallback(){
 function placeWorldModel(template,x,z,scale,rotation=0){
  const m=template.clone(true);m.position.set(x,0,z);m.rotation.y=rotation;m.scale.setScalar(scale);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);return m;
 }
-function loadReusableGLB(url,callback){
- if(!GLTFLoader)return;
- new GLTFLoader().load(url,gltf=>callback(gltf.scene),undefined,e=>console.warn('Optional generated GLB unavailable; visual fallback remains:',url,e));
+const reusableGLBQueue=[];let reusableGLBBusy=false;
+function pumpReusableGLBQueue(){
+ if(reusableGLBBusy||!reusableGLBQueue.length)return;
+ const job=reusableGLBQueue.shift();
+ if(!GLTFLoader){console.warn('GLTFLoader unavailable; visual fallback remains:',job.url);pumpReusableGLBQueue();return}
+ reusableGLBBusy=true;
+ new GLTFLoader().load(job.url,gltf=>{
+  try{job.callback(gltf.scene)}catch(e){console.warn('Generated GLB could not be attached; fallback remains:',job.url,e)}
+  reusableGLBBusy=false;pumpReusableGLBQueue();
+ },undefined,e=>{console.warn('Optional generated GLB unavailable; visual fallback remains:',job.url,e);reusableGLBBusy=false;pumpReusableGLBQueue()});
 }
+function loadReusableGLB(url,callback){reusableGLBQueue.push({url,callback});pumpReusableGLBQueue();}
 // Load the Meshy abandoned building once and reuse the same geometry at several map locations.
 loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template=>{
  abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;
