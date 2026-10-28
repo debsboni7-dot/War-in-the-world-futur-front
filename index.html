@@ -427,6 +427,7 @@ function triggerWeaponVFX() {
 }
 
 let yaw=0,playerYaw=0,pitch=-.13,moveX=0,moveY=0,sprinting=false,aiming=false,jumpVelocity=0,energy=100,shots=0,last=performance.now(),frames=0,fpsStamp=last;
+window.__warCameraTestState=()=>({yaw,playerYaw,playerRotation:player.rotation.y,playerX:player.position.x,playerZ:player.position.z,cameraX:camera.position.x,cameraZ:camera.position.z,aiming});
 const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');let stickId=null,stickRect;
 function setStick(e){stickRect=stick.getBoundingClientRect();const dx=e.clientX-(stickRect.left+stickRect.width/2),dy=e.clientY-(stickRect.top+stickRect.height/2),max=35,len=Math.hypot(dx,dy)||1;moveX=dx/Math.max(max,len);moveY=dy/Math.max(max,len);knob.style.left=(50+moveX*32)+'%';knob.style.top=(50+moveY*32)+'%'}
