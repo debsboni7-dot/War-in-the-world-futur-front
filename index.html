@@ -465,7 +465,7 @@ function makeCityBuilding(x,z,width,height,depth,shade){
  body.position.y=height/2;body.castShadow=true;body.receiveShadow=true;group.add(body);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(width+.28,.22,depth+.28),new THREE.MeshStandardMaterial({color:0x39434a,roughness:.8,metalness:.22}));
  roof.position.y=height+.11;roof.castShadow=true;group.add(roof);
- const floors=Math.floor((height-1.8)/2.15),cols=Math.max(2,Math.floor(width/1.75));
+ const floors=Math.ceil((height-2)/2.15),cols=Math.max(2,Math.floor(width/1.75));
  const addWindow=(wx,wy,wz,rotation)=>{const dummy=new THREE.Object3D();dummy.position.set(wx,wy,wz);dummy.rotation.y=rotation;dummy.updateMatrix();cityWindowMatrices.push(dummy.matrix.clone())};
  for(let floor=0;floor<floors;floor++){const wy=1.45+floor*2.15;if(wy>height-.65)continue;
   for(let col=0;col<cols;col++){const wx=x-width/2+(col+.5)*width/cols;
