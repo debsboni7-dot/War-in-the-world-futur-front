@@ -33,6 +33,14 @@ jobs:
           const js = html.slice(start + '<script type="module">'.length, end);
           fs.writeFileSync('/tmp/game-check.mjs', js);
           const refs = [...html.matchAll(/['"](assets\/models\/[^'"]+)['"]/g)].map(m => m[1]);
+          const requiredCameraRules = [
+            ['independent player facing', /if\s*\(mag\s*>\s*\.08\)\s*\{[^}]*playerYaw\s*=\s*Math\.atan2/s],
+            ['player rotation uses facing state, not camera yaw', /player\.rotation\.y\s*=\s*playerYaw\s*;/],
+            ['camera shoulder offset', /const shoulder=aiming\s*\?\s*1\.05\s*:\s*1\.2/],
+            ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/]
+          ];
+          for (const [label, pattern] of requiredCameraRules) if (!pattern.test(html)) throw new Error('Camera/gameplay regression: ' + label);
+          console.log('Verified independent player facing, shoulder camera, and crosshair-aligned shots.');
           const missing = [...new Set(refs)].filter(path => !fs.existsSync(path));
           if (missing.length) throw new Error('Missing model files:\n' + missing.join('\n'));
           console.log('JavaScript module extracted. Verified ' + new Set(refs).size + ' referenced model paths.');
