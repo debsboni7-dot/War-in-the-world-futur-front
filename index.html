@@ -99,11 +99,12 @@ function spawnEnemy(x,z,index){
 }
 spawnEnemy(-5,-7,0);spawnEnemy(5,-12,1);spawnEnemy(-9,-20,2);spawnEnemy(10,-24,3);
 function updateEnemyCounter(){document.querySelector('#hostiles').textContent=String(enemies.filter(e=>!e.userData.dead).length).padStart(2,'0')}
-let ammo=30;
-function reloadWeapon(){ammo=30;document.querySelector('#ammo').textContent=ammo+'/120';showMessage('Chargeur rechargé')}
+let ammo=30,reserveAmmo=120;
+function updateAmmoDisplay(){document.querySelector('#ammo').textContent=ammo+'/'+reserveAmmo}
+function reloadWeapon(){if(ammo>=30){showMessage('Chargeur déjà plein');return}if(reserveAmmo<=0){showMessage('Plus de munitions');return}const loaded=Math.min(30-ammo,reserveAmmo);ammo+=loaded;reserveAmmo-=loaded;updateAmmoDisplay();showMessage('Rechargé : +'+loaded)}
 function shootHostile(){
  if(ammo<=0){showMessage('Chargeur vide — appuie sur R');return}
- ammo--;document.querySelector('#ammo').textContent=ammo+'/120';shots++;triggerWeaponVFX();
+ ammo--;updateAmmoDisplay();shots++;triggerWeaponVFX();
  const ray=new THREE.Raycaster();ray.far=90;const shotOrigin=new THREE.Vector3(player.position.x,player.position.y+1.35,player.position.z);const shotDirection=new THREE.Vector3(-Math.sin(yaw),Math.sin(-pitch)*.45,-Math.cos(yaw)).normalize();ray.set(shotOrigin,shotDirection);
  const targets=[];for(const e of enemies){if(!e.userData.dead)e.traverse(o=>{if(o.isMesh)targets.push(o)})}
  const hit=ray.intersectObjects(targets,false)[0];
