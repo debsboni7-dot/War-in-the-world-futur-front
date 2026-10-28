@@ -54,7 +54,7 @@ jobs:
           if (fs.existsSync(output)) throw new Error(`Asset ${output} already exists; refusing to reserve or generate it again.`);
           const budgetPath = path.join('assets', 'data', 'meshy-budget.json');
           const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
-          const cost = 20; // Meshy 6 Lite API preview + textured refine, conservatively reserved.
+          const cost = 30; // Conservative per-asset reserve: 20-credit Meshy 6 Lite path plus a 10-credit safety margin.
           if (budget.reserved_credits + cost > budget.budget_limit_credits) {
             throw new Error(`Meshy hard cap blocked this task: reserved=${budget.reserved_credits}, estimated=${cost}, limit=${budget.budget_limit_credits}.`);
           }
