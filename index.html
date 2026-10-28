@@ -478,7 +478,7 @@ setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updat
 // Interactive battlefield assets: reusable road, abandoned buildings, motorcycle and weapon pickup.
 const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike');
 let weaponPickup=null, motorcycle=null, ridingBike=false, bikeModelReady=false;
-const abandonedBuildings=[], roadSegments=[];
+const abandonedBuildings=[], roadSegments=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false;
 function createRubble(x,z,seed=1){
  const rng=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
  for(let i=0;i<7;i++){
@@ -539,14 +539,14 @@ function pumpReusableGLBQueue(){
 function loadReusableGLB(url,callback){reusableGLBQueue.push({url,callback});pumpReusableGLBQueue();}
 // Load the Meshy abandoned building once and reuse the same geometry at several map locations.
 loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template=>{
- abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;
+ abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;abandonedBuildingModelReady=true;
  // The model is shared between instances; rubble stays as separate low-cost detail.
  for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]]){
   const b=placeWorldModel(template,p[0],p[1],1.0,p[2]);abandonedBuildings.push(b);createRubble(p[0],p[1]+2.6,Math.floor(Math.abs(p[0]*13+p[1]*7))+3);
  }
 });
 loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',template=>{
- roadSegments.forEach(m=>scene.remove(m));roadSegments.length=0;
+ roadSegments.forEach(m=>scene.remove(m));roadSegments.length=0;generatedRoadModelReady=true;
  const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3());
  const alongX=size.x>size.z,segLength=Math.max(size.x,size.z),targetLength=10;
  const scale=targetLength/Math.max(.01,segLength);
@@ -636,6 +636,7 @@ function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
 window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||null,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
 window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()}};
+window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
