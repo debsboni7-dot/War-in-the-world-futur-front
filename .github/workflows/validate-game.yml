@@ -90,6 +90,22 @@ jobs:
             if (afterTwoShots !== '28/120') throw new Error('Firing did not consume exactly two rounds: ' + afterTwoShots);
             if (afterReload !== '30/118') throw new Error('Reload did not consume reserve ammo correctly: ' + afterReload);
             if (!aimEnabled) throw new Error('Aim button did not activate');
+            // Exercise the real pointer-look handler and assert camera yaw is independent from player facing.
+            await page.waitForFunction(() => typeof window.__warCameraTestState === 'function');
+            const cameraBefore = await page.evaluate(() => window.__warCameraTestState());
+            await page.mouse.move(700, 400);
+            await page.mouse.down();
+            await page.mouse.move(760, 420, {steps: 5});
+            await page.mouse.up();
+            await page.waitForTimeout(350);
+            const cameraAfterLook = await page.evaluate(() => window.__warCameraTestState());
+            const yawDelta = Math.abs(cameraAfterLook.yaw-cameraBefore.yaw);
+            const facingDelta = Math.abs(cameraAfterLook.playerRotation-cameraBefore.playerRotation);
+            const shoulderDistance = Math.hypot(cameraAfterLook.cameraX-cameraAfterLook.playerX,cameraAfterLook.cameraZ-cameraAfterLook.playerZ);
+            console.log(JSON.stringify({cameraBefore,cameraAfterLook,yawDelta,facingDelta,shoulderDistance},null,2));
+            if (yawDelta < 0.05) throw new Error('Pointer drag did not rotate the camera');
+            if (facingDelta > 0.001) throw new Error('Player facing changed when only the camera was rotated');
+            if (shoulderDistance < 3 || shoulderDistance > 9) throw new Error('Over-shoulder camera distance outside expected range: '+shoulderDistance);
             // A second, portrait-sized run catches mobile layout/startup regressions.
             const mobile = await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
             const mobileErrors = [];
