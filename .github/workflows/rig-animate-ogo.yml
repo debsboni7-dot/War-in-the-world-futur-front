@@ -1,0 +1,126 @@
+name: Rig and animate Ogo with Meshy
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meshy-ogo-rig-animation
+  cancel-in-progress: false
+
+jobs:
+  rig-and-animate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.issue.title, '[RIGPLAYER] ') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Reserve Meshy credits before rigging
+        env:
+          MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+        run: |
+          test -n "$MESHY_API_KEY" || { echo "Missing MESHY_API_KEY secret"; exit 1; }
+          node <<'NODE'
+          const fs=require('fs');
+          const p='assets/data/meshy-budget.json';
+          const b=JSON.parse(fs.readFileSync(p,'utf8'));
+          const out='assets/models/generated/ogo-player-character-rigged-animated.glb';
+          if(fs.existsSync(out)) throw new Error('Rigged character already exists; refusing duplicate Meshy tasks.');
+          const reserve=30; // up to 5 rigging + 8 compatible actions at 3 credits each, with a small safety margin
+          if(b.reserved_credits+reserve>b.budget_limit_credits) throw new Error('Budget cap blocks rigging: '+JSON.stringify({reserved:b.reserved_credits,limit:b.budget_limit_credits}));
+          b.reserved_credits+=reserve;
+          b.available_credits=b.budget_limit_credits-b.reserved_credits;
+          b.reservations.push({asset:'ogo-player-character-rigged-animated',credits:reserve,status:'reserved',created_at:new Date().toISOString(),note:'Meshy humanoid rigging plus up to eight compatible animation clips; reserved before API calls.'});
+          fs.writeFileSync(p,JSON.stringify(b,null,2)+'\n');
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/data/meshy-budget.json
+          git commit -m "Reserve Meshy credits for Ogo rigging and animations"
+          git push
+
+      - name: Rig Ogo and apply suitable animation clips
+        env:
+          MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const {execFileSync}=require('child_process');
+          const base='https://api.meshy.ai/openapi/v1';
+          const key=process.env.MESHY_API_KEY;
+          async function request(url,options={}) {
+            const r=await fetch(url,{...options,headers:{Authorization:'Bearer '+key,'Content-Type':'application/json',...(options.headers||{})}});
+            const t=await r.text(); let data={}; try{data=t?JSON.parse(t):{}}catch{}
+            if(!r.ok)throw new Error('Meshy API '+r.status+': '+t.slice(0,1000));
+            return data;
+          }
+          async function waitTask(type,id) {
+            const end=Date.now()+35*60*1000;
+            while(Date.now()<end){
+              const task=await request(base+'/'+type+'/'+id);
+              console.log(type+' '+id+': '+task.status+' '+(task.progress??0)+'%');
+              if(task.status==='SUCCEEDED')return task;
+              if(['FAILED','CANCELED'].includes(task.status))throw new Error(type+' '+task.status+': '+(task.task_error?.message||'no details'));
+              await new Promise(r=>setTimeout(r,12000));
+            }
+            throw new Error('Timed out waiting for Meshy '+type+' task '+id);
+          }
+          async function main(){
+            const modelUrl='https://debsboni7-dot.github.io/War-in-the-world-futur-front/assets/models/generated/ogo-player-character-v2.glb';
+            const head=await fetch(modelUrl,{method:'HEAD'});
+            if(!head.ok)throw new Error('Ogo GLB is not reachable from GitHub Pages yet: HTTP '+head.status);
+            const rigCreate=await request(base+'/rigging',{method:'POST',body:JSON.stringify({model_url:modelUrl,height_meters:1.8})});
+            const rigId=rigCreate.result;
+            const rig=await waitTask('rigging',rigId);
+            const library=await request(base+'/animations/library');
+            if(!Array.isArray(library))throw new Error('Meshy animation library response is not an array');
+            const used=new Set(),selected=[];
+            function choose(label,pattern,category){
+              const found=library.find(a=>!used.has(a.action_id)&&pattern.test((a.name||'')+' '+(a.key||''))&&(!category||a.category===category));
+              if(found){used.add(found.action_id);selected.push({label,action_id:found.action_id,name:found.name});}
+            }
+            choose('idle',/\bidle\b|standing idle/i);
+            choose('walk',/\bwalk(ing)?\b/i,'WalkAndRun');
+            choose('run',/\brun(ning)?\b|jog/i,'WalkAndRun');
+            choose('jump',/\bjump(ing)?\b/i);
+            choose('fire',/shoot|rifle|weapon attack|attack with weapon|\battack\b/i,'Fighting');
+            choose('reload',/reload|reloading/i);
+            choose('ride',/motorcycle|riding|sit on|sitting/i);
+            choose('mount',/mount|getting on|enter vehicle/i);
+            if(selected.length<4)throw new Error('Not enough suitable animations in Meshy library: '+JSON.stringify(selected));
+            console.log('Selected compatible actions: '+JSON.stringify(selected));
+            const animationCreate=await request(base+'/animations',{method:'POST',body:JSON.stringify({rig_task_id:rigId,action_ids:selected.map(a=>a.action_id)})});
+            const animation=await waitTask('animations',animationCreate.result);
+            const url=animation.result?.animation_glb_url;
+            if(!url)throw new Error('Meshy animation task succeeded without animation_glb_url');
+            const download=await fetch(url);
+            if(!download.ok)throw new Error('Could not download animated GLB: HTTP '+download.status);
+            const bytes=Buffer.from(await download.arrayBuffer());
+            if(bytes.length<100000)throw new Error('Downloaded rigged GLB looks unexpectedly small: '+bytes.length);
+            const out='assets/models/generated/ogo-player-character-rigged-animated.glb';
+            fs.writeFileSync(out,bytes);
+            const budgetPath='assets/data/meshy-budget.json',budget=JSON.parse(fs.readFileSync(budgetPath,'utf8'));
+            const entry=[...budget.reservations].reverse().find(x=>x.asset==='ogo-player-character-rigged-animated'&&x.status==='reserved');
+            if(!entry)throw new Error('Budget reservation missing; refusing to publish the asset');
+            const actual=(rig.consumed_credits??5)+(animation.consumed_credits??(selected.length*3));
+            entry.credits=actual;entry.status='completed';entry.rig_task_id=rigId;entry.animation_task_id=animation.id;entry.selected_animations=selected;entry.completed_at=new Date().toISOString();
+            budget.reserved_credits-=30-actual;budget.available_credits=budget.budget_limit_credits-budget.reserved_credits;
+            fs.writeFileSync(budgetPath,JSON.stringify(budget,null,2)+'\n');
+            console.log('Saved '+out+' ('+bytes.length+' bytes), actual Meshy credits='+actual);
+            execFileSync('git',['config','user.name','github-actions[bot]']);
+            execFileSync('git',['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
+            execFileSync('git',['add',out,budgetPath]);
+            execFileSync('git',['commit','-m','Add Meshy-rigged Ogo with compatible animation clips']);
+            execFileSync('git',['push']);
+          }
+          main().catch(e=>{console.error(e);process.exit(1)});
+          NODE
