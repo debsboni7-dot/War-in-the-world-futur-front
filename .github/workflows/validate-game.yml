@@ -74,7 +74,6 @@ jobs:
             await page.locator('#aim').click();
             const aimEnabled = await page.locator('#aim').evaluate(el => el.classList.contains('active'));
             console.log(JSON.stringify({result,afterTwoShots,afterReload,aimEnabled,pageErrors},null,2));
-            await browser.close();
             if (!result.canvas || result.canvasSize[0] < 1 || result.canvasSize[1] < 1) throw new Error('Game canvas did not initialize');
             if (pageErrors.length) throw new Error('Browser JavaScript errors: ' + pageErrors.join(' | '));
             if (result.fatal) throw new Error('Game startup displayed a fatal error: ' + result.message);
@@ -97,5 +96,6 @@ jobs:
             if (!mobileState.canvas) throw new Error('Mobile canvas did not initialize');
             for (const control of ['stick','fire','jump','reload','aim','run']) if (!mobileState[control]) throw new Error('Mobile control not visible: '+control);
             if (mobileErrors.length) throw new Error('Mobile JavaScript errors: '+mobileErrors.join(' | '));
+            await browser.close();
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
