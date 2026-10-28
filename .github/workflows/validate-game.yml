@@ -45,9 +45,11 @@ jobs:
           ];
           for (const [label, pattern] of requiredCameraRules) if (!pattern.test(html)) throw new Error('Camera/gameplay regression: ' + label);
           console.log('Verified independent player facing, shoulder camera, and crosshair-aligned shots.');
-          const missing = [...new Set(refs)].filter(path => !fs.existsSync(path));
+          const optionalGenerated = new Set(['assets/models/generated/segment-route-asphalte-abimee.glb','assets/models/generated/moto-militaire-futuriste.glb']);
+          const missing = [...new Set(refs)].filter(path => !fs.existsSync(path) && !optionalGenerated.has(path));
           if (missing.length) throw new Error('Missing model files:\n' + missing.join('\n'));
-          console.log('JavaScript module extracted. Verified ' + new Set(refs).size + ' referenced model paths.');
+          console.log('JavaScript module extracted. Verified ' + (new Set(refs).size-missing.length) + ' present model paths; optional Meshy models have procedural fallbacks.');
+          for (const [label,pattern] of [['contextual bike interaction',/mountButton\.classList\.toggle\('visible',ridingBike\|\|distBike<3\.1\)/],['weapon pickup interaction',/pickupButton\.classList\.toggle\('visible',!!weaponPickup\?\.visible&&distWeapon<2\.5\)/],['high-resolution textures',/isLowMemoryPhone\?'2k':'4k'/],['no primitive soldier fallback',/placeholderParts\.forEach\(p=>p\.visible=false\);gun\.visible=false;showMessage\('Field test ready/]]) if(!pattern.test(html)) throw new Error('Missing required gameplay/visual feature: '+label);
           NODE
           node --check /tmp/game-check.mjs
       - name: Install browser smoke-test tools
@@ -72,6 +74,7 @@ jobs:
               canvas: !!document.querySelector('#game canvas'),
               canvasSize: (() => { const c=document.querySelector('#game canvas'); return c ? [c.width,c.height] : [0,0] })(),
               fps: document.querySelector('#fps')?.textContent || '',
+              player: typeof window.__warPlayerTestState==='function'?window.__warPlayerTestState():null,
               ammo: document.querySelector('#ammo')?.textContent || '',
               message: document.querySelector('#message')?.textContent || '',
               fatal: !!document.querySelector('#message') && getComputedStyle(document.querySelector('#message')).zIndex === '1000'
@@ -87,6 +90,8 @@ jobs:
             const aimEnabled = await page.locator('#aim').evaluate(el => el.classList.contains('active'));
             console.log(JSON.stringify({result,afterTwoShots,afterReload,aimEnabled,pageErrors},null,2));
             if (!result.canvas || result.canvasSize[0] < 1 || result.canvasSize[1] < 1) throw new Error('Game canvas did not initialize');
+            if (result.player && result.player.placeholderVisible) throw new Error('Primitive placeholder soldier must remain hidden');
+            if (result.player && result.player.playerVisibleMeshes===0) throw new Error('No visible 3D mesh found under the player root');
             if (pageErrors.length) throw new Error('Browser JavaScript errors: ' + pageErrors.join(' | '));
             if (result.fatal) throw new Error('Game startup displayed a fatal error: ' + result.message);
             if (afterTwoShots !== '28/120') throw new Error('Firing did not consume exactly two rounds: ' + afterTwoShots);
