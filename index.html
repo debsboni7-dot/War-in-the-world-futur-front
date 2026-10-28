@@ -444,7 +444,7 @@ setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updat
 // Interactive battlefield assets: reusable road, abandoned buildings, motorcycle and weapon pickup.
 const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike'),interactButton=document.querySelector('#interactWorld');
 let weaponPickup=null, motorcycle=null, ridingBike=false, bikeModelReady=false;
-const abandonedBuildings=[], roadSegments=[],doorInteractables=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false;
+const abandonedBuildings=[], roadSegments=[],doorInteractables=[],fallbackRubble=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false,meshyBuildingLoadSucceeded=false;
 function makeInteractiveDoor(x,z,rotation=0){
  const rootDoor=new THREE.Group();rootDoor.position.set(x,0,z);rootDoor.rotation.y=rotation;scene.add(rootDoor);
  const frameMat=new THREE.MeshStandardMaterial({color:0x454f55,metalness:.55,roughness:.7});
@@ -457,12 +457,14 @@ function makeInteractiveDoor(x,z,rotation=0){
 }
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeInteractiveDoor(p[0],p[1],p[2]);
 function createRubble(x,z,seed=1){
+ const group=new THREE.Group();group.name='rubble-details';
  const rng=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
  for(let i=0;i<7;i++){
   const w=.25+rng()*.85,h=.12+rng()*.42,d=.25+rng()*.75;
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:[0x777d7d,0x555f63,0x8a8980,0x494f52][i%4],roughness:1}));
-  m.position.set(x+(rng()-.5)*4,h/2,z+(rng()-.5)*3);m.rotation.y=rng()*Math.PI;m.rotation.z=(rng()-.5)*.3;scene.add(m);
+  m.position.set(x+(rng()-.5)*4,h/2,z+(rng()-.5)*3);m.rotation.y=rng()*Math.PI;m.rotation.z=(rng()-.5)*.3;group.add(m);
  }
+ scene.add(group);if(!meshyBuildingLoadSucceeded)fallbackRubble.push(group);return group;
 }
 function makeAbandonedBuilding(x,z,rotation=0){
  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rotation;
@@ -480,11 +482,13 @@ function makeAbandonedBuilding(x,z,rotation=0){
 function makeRoadFallback(z){
  const road=new THREE.Mesh(new THREE.PlaneGeometry(7.5,10),new THREE.MeshStandardMaterial({color:0x30383a,roughness:1,map:makeNoiseTexture('#303638',Math.abs(Math.round(z*13))+4,2,'grain')}));
  road.rotation.x=-Math.PI/2;road.position.set(0,.005,z);scene.add(road);roadSegments.push(road);
- for(const side of [-1,1]){const edge=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,10),new THREE.MeshStandardMaterial({color:0xb3a97f,roughness:1}));edge.position.set(side*3.35,.02,z);scene.add(edge)}
- const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.018,3.4),new THREE.MeshStandardMaterial({color:0xd6cda4,roughness:1}));stripe.position.set(0,.025,z);scene.add(stripe);
+ for(const side of [-1,1]){const edge=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,10),new THREE.MeshStandardMaterial({color:0xb3a97f,roughness:1}));edge.position.set(side*3.35,.02,z);scene.add(edge);roadSegments.push(edge)}
+ const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.018,3.4),new THREE.MeshStandardMaterial({color:0xd6cda4,roughness:1}));stripe.position.set(0,.025,z);scene.add(stripe);roadSegments.push(stripe);
 }
 for(let i=0;i<8;i++)makeRoadFallback(-8-i*10);
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeAbandonedBuilding(p[0],p[1],p[2]);
+// Hide procedural stand-ins while the clean Meshy city assets load; reveal them only if the model download fails.
+roadSegments.forEach(m=>m.visible=false);abandonedBuildings.forEach(m=>m.visible=false);fallbackRubble.forEach(m=>m.visible=false);
 function makeMotorcycleFallback(){
  const g=new THREE.Group();
  const rubber=new THREE.MeshStandardMaterial({color:0x171b1d,roughness:.98}),metal=new THREE.MeshStandardMaterial({color:0x39454b,metalness:.65,roughness:.4}),lamp=new THREE.MeshStandardMaterial({color:0x8df5ff,emissive:0x1c91a8,emissiveIntensity:1.4});
@@ -506,22 +510,22 @@ const reusableGLBQueue=[];let reusableGLBBusy=false;
 function pumpReusableGLBQueue(){
  if(reusableGLBBusy||!reusableGLBQueue.length)return;
  const job=reusableGLBQueue.shift();
- if(!GLTFLoader){console.warn('GLTFLoader unavailable; visual fallback remains:',job.url);pumpReusableGLBQueue();return}
+ if(!GLTFLoader){console.warn('GLTFLoader unavailable; visual fallback remains:',job.url);job.onError?.(new Error('GLTFLoader unavailable'));pumpReusableGLBQueue();return}
  reusableGLBBusy=true;
  new GLTFLoader().load(job.url,gltf=>{
   try{job.callback(gltf.scene)}catch(e){console.warn('Generated GLB could not be attached; fallback remains:',job.url,e)}
   reusableGLBBusy=false;pumpReusableGLBQueue();
- },undefined,e=>{console.warn('Optional generated GLB unavailable; visual fallback remains:',job.url,e);reusableGLBBusy=false;pumpReusableGLBQueue()});
+ },undefined,e=>{console.warn('Optional generated GLB unavailable; visual fallback remains:',job.url,e);job.onError?.(e);reusableGLBBusy=false;pumpReusableGLBQueue()});
 }
-function loadReusableGLB(url,callback){reusableGLBQueue.push({url,callback});pumpReusableGLBQueue();}
+function loadReusableGLB(url,callback,onError){reusableGLBQueue.push({url,callback,onError});pumpReusableGLBQueue();}
 // Load the Meshy abandoned building once and reuse the same geometry at several map locations.
 loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template=>{
- abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;abandonedBuildingModelReady=true;
+ abandonedBuildings.forEach(m=>scene.remove(m));abandonedBuildings.length=0;fallbackRubble.forEach(m=>scene.remove(m));fallbackRubble.length=0;meshyBuildingLoadSucceeded=true;abandonedBuildingModelReady=true;
  // The model is shared between instances; rubble stays as separate low-cost detail.
  for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]]){
   const b=placeWorldModel(template,p[0],p[1],1.0,p[2]);abandonedBuildings.push(b);createRubble(p[0],p[1]+2.6,Math.floor(Math.abs(p[0]*13+p[1]*7))+3);
  }
-});
+},()=>{roadSegments.forEach(m=>m.visible=true);abandonedBuildings.forEach(m=>m.visible=true);fallbackRubble.forEach(m=>m.visible=true)});
 loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',template=>{
  roadSegments.forEach(m=>scene.remove(m));roadSegments.length=0;generatedRoadModelReady=true;
  const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3());
@@ -533,11 +537,11 @@ loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',t
  }
 });
 motorcycle=new THREE.Group();motorcycle.position.set(7,0,3);scene.add(motorcycle);
-const fallbackBike=makeMotorcycleFallback();motorcycle.add(fallbackBike);
+const fallbackBike=makeMotorcycleFallback();fallbackBike.visible=false;motorcycle.add(fallbackBike);
 loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',template=>{
  motorcycle.remove(fallbackBike);const b=template.clone(true),bounds=new THREE.Box3().setFromObject(b),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  b.scale.setScalar(2.3/Math.max(.01,largest));b.position.set(-center.x*b.scale.x,-bounds.min.y*b.scale.y,-center.z*b.scale.z);motorcycle.add(b);bikeModelReady=true;
-});
+},()=>{fallbackBike.visible=true});
 weaponPickup=new THREE.Group();weaponPickup.position.set(4.2,0,2.5);scene.add(weaponPickup);
 const pickupGlow=new THREE.Mesh(new THREE.TorusGeometry(.42,.055,6,18),new THREE.MeshBasicMaterial({color:0x6cf7ff}));
 pickupGlow.rotation.x=Math.PI/2;pickupGlow.position.y=.06;weaponPickup.add(pickupGlow);
