@@ -97,7 +97,7 @@ function spawnEnemy(x,z,index){
  const fill=new THREE.Mesh(new THREE.PlaneGeometry(.96,.065),new THREE.MeshBasicMaterial({color:0xff4057,side:THREE.DoubleSide}));fill.position.z=.006;hp.add(fill);hp.userData.fill=fill;e.userData.hp=hp;
  e.userData.fallbackVisual=fallbackVisual;scene.add(e);enemies.push(e);
 }
-spawnEnemy(-5,-7,0);spawnEnemy(5,-12,1);spawnEnemy(-9,-20,2);spawnEnemy(10,-24,3);
+spawnEnemy(-5,-7,0);spawnEnemy(5,-12,1);spawnEnemy(-15,-19,2);spawnEnemy(15,-25,3);
 function updateEnemyCounter(){document.querySelector('#hostiles').textContent=String(enemies.filter(e=>!e.userData.dead).length).padStart(2,'0')}
 let ammo=30,reserveAmmo=120;
 function updateAmmoDisplay(){document.querySelector('#ammo').textContent=ammo+'/'+reserveAmmo}
