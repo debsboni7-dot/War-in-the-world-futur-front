@@ -220,7 +220,7 @@ function attachWeaponToHand(){
   hand.add(weaponModel);
   // Apply the centering and palm grip in world-sized offsets despite the small inherited bone scale.
   weaponModel.position.set((weaponCenterOffset.x+.045)/Math.max(.0001,hs.x),(weaponCenterOffset.y-.055)/Math.max(.0001,hs.y),(weaponCenterOffset.z-.105)/Math.max(.0001,hs.z));
-  weaponModel.rotation.set(0,Math.PI/2,0);
+  weaponModel.rotation.set(0,0,0);
   weaponAnchor='right-hand bone';
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
@@ -686,16 +686,18 @@ for (let i=0;i<18;i++) {
 let vfxClock = 0;
 function triggerWeaponVFX(targetPoint=null) {
   playGunshotSFX();
-  const muzzle = new THREE.Vector3();
+  const muzzle = new THREE.Vector3(),weaponForward=new THREE.Vector3(0,0,-1),weaponQuaternion=new THREE.Quaternion();
   if(weaponModel){
     weaponModel.updateWorldMatrix(true,false);
-    weaponModel.getWorldPosition(muzzle);
-    // The rifle's barrel points forward from the right-hand grip; put the flash at its muzzle.
-    muzzle.add(new THREE.Vector3(0,0,-.42).applyAxisAngle(new THREE.Vector3(0,1,0),playerYaw));
+    weaponModel.getWorldPosition(muzzle);weaponModel.getWorldQuaternion(weaponQuaternion);
+    weaponForward.applyQuaternion(weaponQuaternion).normalize();
+    // Muzzle flash and light are placed at the actual forward end of the held rifle.
+    muzzle.addScaledVector(weaponForward,.42);
   }else{
+    weaponForward.set(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),playerYaw);
     muzzle.set(.48,1.22,-.62).applyAxisAngle(new THREE.Vector3(0,1,0),playerYaw).add(player.position);
   }
-  const tracerEnd=targetPoint?targetPoint.clone():muzzle.clone().add(new THREE.Vector3(0,0,-22).applyAxisAngle(new THREE.Vector3(0,1,0),yaw));
+  const tracerEnd=targetPoint?targetPoint.clone():muzzle.clone().addScaledVector(weaponForward,22);
   tracerGeometry.setFromPoints([muzzle,tracerEnd]);tracerGeometry.attributes.position.needsUpdate=true;tracerGeometry.computeBoundingSphere();bulletTracer.visible=true;tracerLife=.13;tracerMaterial.opacity=1;bulletProjectile.position.copy(muzzle);bulletVelocity.copy(tracerEnd).sub(muzzle).normalize().multiplyScalar(75);bulletLife=Math.min(.24,Math.max(.08,muzzle.distanceTo(tracerEnd)/75));bulletProjectile.visible=true;
   choosePlayerAction('fire');playerActionTimer=.22;
   // Strong, visible test flash plus a short forward tracer so FIRE always has a visible result.
@@ -705,7 +707,7 @@ function triggerWeaponVFX(targetPoint=null) {
   for (const p of particles) {
     if (p.life>0) continue;
     p.mesh.visible=true; p.life=.22+Math.random()*.16; p.mesh.position.copy(muzzle);
-    p.velocity.set((Math.random()-.5)*2.4, Math.random()*1.8, -1.4-Math.random()*2.4).applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+    p.velocity.copy(weaponForward).multiplyScalar(1.4+Math.random()*2.4).add(new THREE.Vector3((Math.random()-.5)*1.4,Math.random()*1.2,(Math.random()-.5)*1.4));
     if (++used>=7) break;
   }
 }
