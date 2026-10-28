@@ -27,8 +27,10 @@ jobs:
       - name: Reserve Meshy credits before rigging
         env:
           MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           test -n "$MESHY_API_KEY" || { echo "Missing MESHY_API_KEY secret"; exit 1; }
+          if [[ "${ISSUE_BODY:-}" =~ RECOVER_RIG_TASK=([0-9a-f-]+) ]]; then echo "Recovery mode: reusing the completed rigging task; no new credit reservation."; exit 0; fi
           node <<'NODE'
           const fs=require('fs');
           const p='assets/data/meshy-budget.json';
@@ -51,6 +53,7 @@ jobs:
       - name: Rig Ogo and apply suitable animation clips
         env:
           MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           node <<'NODE'
           const fs=require('fs');
@@ -74,7 +77,41 @@ jobs:
             }
             throw new Error('Timed out waiting for Meshy '+type+' task '+id);
           }
+          async function recoverRig(rigId){
+            const rig=await request(base+'/rigging/'+rigId);
+            if(rig.status!=='SUCCEEDED')throw new Error('Recovery rig task is not SUCCEEDED: '+rig.status);
+            const result=rig.result||{};
+            if(!result.rigged_character_glb_url)throw new Error('Rig task has no rigged_character_glb_url');
+            async function save(url,path){
+              if(!url)return false;
+              const r=await fetch(url);if(!r.ok)throw new Error('Could not download '+path+': HTTP '+r.status);
+              const bytes=Buffer.from(await r.arrayBuffer());if(bytes.length<100000)throw new Error('Downloaded file too small: '+path);
+              fs.writeFileSync(path,bytes);console.log('Saved '+path+' ('+bytes.length+' bytes)');return true;
+            }
+            const rigPath='assets/models/generated/ogo-player-character-rigged-animated.glb';
+            await save(result.rigged_character_glb_url,rigPath);
+            const downloaded=[];
+            for(const [key,path] of [['walking_glb_url','assets/models/generated/ogo-walking-meshy.glb'],['running_glb_url','assets/models/generated/ogo-running-meshy.glb']]){
+              if(result.basic_animations?.[key]&&await save(result.basic_animations[key],path))downloaded.push(path);
+            }
+            const budgetPath='assets/data/meshy-budget.json',budget=JSON.parse(fs.readFileSync(budgetPath,'utf8'));
+            const entry=[...budget.reservations].reverse().find(x=>x.asset==='ogo-player-character-rigged-animated'&&x.status==='reserved');
+            if(!entry)throw new Error('Budget reservation missing; refusing to publish recovered model');
+            const actual=rig.consumed_credits??5;
+            entry.credits=actual;entry.status=downloaded.length?'rigged_with_basic_animations':'rigged_basic_animations_unverified';
+            entry.rig_task_id=rigId;entry.basic_animation_files=downloaded;entry.completed_at=new Date().toISOString();
+            entry.note='Rigging task recovered after Meshy rejected the paid animation task due to API credit limit; no second paid task was submitted.';
+            budget.reserved_credits-=30-actual;budget.available_credits=budget.budget_limit_credits-budget.reserved_credits;
+            fs.writeFileSync(budgetPath,JSON.stringify(budget,null,2)+'\\n');
+            execFileSync('git',['config','user.name','github-actions[bot]']);
+            execFileSync('git',['config','user.email','41898282+github-actions[bot]@users.noreply.github.com']);
+            execFileSync('git',['add',rigPath,budgetPath,...downloaded]);
+            execFileSync('git',['commit','-m','Recover Meshy-rigged Ogo and available basic animations']);
+            execFileSync('git',['push']);
+          }
           async function main(){
+            const recoveryId=(process.env.ISSUE_BODY||'').match(/RECOVER_RIG_TASK=([0-9a-f-]+)/i)?.[1];
+            if(recoveryId){await recoverRig(recoveryId);return;}
             const modelUrl='https://debsboni7-dot.github.io/War-in-the-world-futur-front/assets/models/generated/ogo-player-character-v2.glb';
             const head=await fetch(modelUrl,{method:'HEAD'});
             if(!head.ok)throw new Error('Ogo GLB is not reachable from GitHub Pages yet: HTTP '+head.status);
