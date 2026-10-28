@@ -1,9 +1,9 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
-  "version": 4,
-  "status": "generated-assets-integrated-visual-and-device-verification-pending",
+  "version": 5,
+  "status": "city-collision-and-player-rig-pipeline-in-progress",
   "updatedAt": "2026-10-28",
-  "note": "New Meshy GLBs for Ogo, the abandoned building, modular road and motorcycle are wired into the runtime. File presence and browser interaction tests are being verified; geometry appearance, 4K/PBR visual quality and real Samsung-device performance are not yet visually confirmed.",
+  "note": "The live scene no longer renders forest trees or the scattered weapon gallery. City buildings and doors have collision/interaction logic; a visible bullet tracer and visible seated rider are wired in. Meshy Ogo rigging + compatible animation clips is now queued through GitHub Actions. Visual quality, rig deformation and real Samsung-device performance still require post-generation/browser verification.",
   "mobilePolicy": {
     "loadAllAtStartup": false,
     "streamGalleryOneModelAtATime": true,
@@ -592,6 +592,23 @@
         "geometryParsed": false,
         "visualInspection": false,
         "texturesVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "ogo-player-character-rigged-animated",
+      "category": "character",
+      "label": "Ogo humanoid with Meshy rig and action clips",
+      "source": "assets/models/generated/ogo-player-character-rigged-animated.glb",
+      "format": "glb",
+      "runtimeReady": false,
+      "loadStrategy": "preferred player model; fallback to Ogo base GLB",
+      "validation": {
+        "filePresent": false,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "rigAndAnimationClipsVerified": false,
         "devicePerformanceVerified": false
       }
     }
