@@ -447,7 +447,7 @@ setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updat
 // Interactive battlefield assets: reusable road, abandoned buildings, motorcycle and weapon pickup.
 const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike'),interactButton=document.querySelector('#interactWorld');
 let weaponPickup=null, motorcycle=null, ridingBike=false, bikeModelReady=false;
-const abandonedBuildings=[], roadSegments=[],doorInteractables=[],fallbackRubble=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=true,meshyBuildingLoadSucceeded=false;
+const abandonedBuildings=[], roadSegments=[],doorInteractables=[],fallbackRubble=[],cityBuildings=[],cityWindowMatrices=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=true,meshyBuildingLoadSucceeded=false;
 function makeInteractiveDoor(x,z,rotation=0){
  const rootDoor=new THREE.Group();rootDoor.position.set(x,0,z);rootDoor.rotation.y=rotation;scene.add(rootDoor);
  const frameMat=new THREE.MeshStandardMaterial({color:0x454f55,metalness:.55,roughness:.7});
@@ -459,6 +459,32 @@ function makeInteractiveDoor(x,z,rotation=0){
  doorInteractables.push({root:rootDoor,hinge,panel,open:false,x,z,rotation});
 }
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeInteractiveDoor(p[0],p[1],p[2]);
+function makeCityBuilding(x,z,width,height,depth,shade){
+ const group=new THREE.Group();group.position.set(x,0,z);group.name='clean-city-building';scene.add(group);
+ const body=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),new THREE.MeshStandardMaterial({color:shade,roughness:.88,metalness:.12}));
+ body.position.y=height/2;body.castShadow=true;body.receiveShadow=true;group.add(body);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(width+.28,.22,depth+.28),new THREE.MeshStandardMaterial({color:0x39434a,roughness:.8,metalness:.22}));
+ roof.position.y=height+.11;roof.castShadow=true;group.add(roof);
+ const floors=Math.floor((height-1.8)/2.15),cols=Math.max(2,Math.floor(width/1.75));
+ const addWindow=(wx,wy,wz,rotation)=>{const dummy=new THREE.Object3D();dummy.position.set(wx,wy,wz);dummy.rotation.y=rotation;dummy.updateMatrix();cityWindowMatrices.push(dummy.matrix.clone())};
+ for(let floor=0;floor<floors;floor++){const wy=1.45+floor*2.15;if(wy>height-.65)continue;
+  for(let col=0;col<cols;col++){const wx=x-width/2+(col+.5)*width/cols;
+   addWindow(wx,wy,z+depth/2+.045,0);addWindow(wx,wy,z-depth/2-.045,0);
+  }
+  const sideRows=Math.max(2,Math.floor(depth/1.8));
+  for(let col=0;col<sideRows;col++){const wz=z-depth/2+(col+.5)*depth/sideRows;
+   addWindow(x+width/2+.045,wy,wz,Math.PI/2);addWindow(x-width/2-.045,wy,wz,Math.PI/2);
+  }
+ }
+ // Small rooftop service boxes keep the silhouettes architectural without using placeholder cylinders.
+ for(const side of [-1,1]){const vent=new THREE.Mesh(new THREE.BoxGeometry(.8,.55,.8),new THREE.MeshStandardMaterial({color:0x4a565d,roughness:.8,metalness:.3}));vent.position.set(side*width*.22,height+.38,depth*.12);vent.castShadow=true;group.add(vent)}
+ cityBuildings.push({group,x,z,hx:width/2,hz:depth/2});
+}
+function finishCityWindows(){
+ if(!cityWindowMatrices.length)return;
+ const geometry=new THREE.BoxGeometry(.72,1.05,.075),material=new THREE.MeshStandardMaterial({color:0x5d8491,metalness:.48,roughness:.28,emissive:0x132a32,emissiveIntensity:.28});
+ const windows=new THREE.InstancedMesh(geometry,material,cityWindowMatrices.length);for(let i=0;i<cityWindowMatrices.length;i++)windows.setMatrixAt(i,cityWindowMatrices[i]);windows.instanceMatrix.needsUpdate=true;windows.castShadow=false;windows.receiveShadow=true;scene.add(windows);
+}
 function createRubble(x,z,seed=1){
  const group=new THREE.Group();group.name='rubble-details';
  const rng=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
@@ -490,7 +516,9 @@ function makeRoadFallback(z){
 }
 for(let i=0;i<8;i++)makeRoadFallback(-8-i*10);
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeAbandonedBuilding(p[0],p[1],p[2]);
-// Hide procedural stand-ins while the clean Meshy city assets load; reveal them only if the model download fails.
+// Add clean modern building facades on both sides so the combat zone reads as a city, not an empty desert.
+for(const p of [[-16,-8,7.5,10,6.5,0x66747b],[16,-8,7.5,12,6.5,0x56666e],[-16,-38,7.5,12,6.5,0x707a7e],[16,-38,7.5,14,6.5,0x52636b],[-16,-68,7.5,11,6.5,0x5e6c72],[16,-68,7.5,13,6.5,0x748084]])makeCityBuilding(...p);finishCityWindows();
+// Hide procedural abandoned-building stand-ins while the clean Meshy assets load; the modern city blocks stay visible.
 abandonedBuildings.forEach(m=>m.visible=false);fallbackRubble.forEach(m=>m.visible=false);
 function makeMotorcycleFallback(){
  const g=new THREE.Group();
@@ -622,13 +650,14 @@ function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
 window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||null,playerVisible:!!militaryModel?.visible,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
 window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()},moveNearDoor:()=>{player.position.set(-10,0,-12.8);updateContextActions()},collisionAt:(x,z)=>isBlocked(x,z),nearestDoorOpen:()=>closestDoor()?.open??null};
-window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:0,interactiveDoors:doorInteractables.length});
+window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:0,cityBuildings:cityBuildings.length,cityWindows:cityWindowMatrices.length,interactiveDoors:doorInteractables.length});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=[];
 function isBlocked(x,z){
  if(Math.abs(x)>96||Math.abs(z)>96)return true;
  for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}
+ for(const b of cityBuildings){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}
  if(!ridingBike&&motorcycle&&Math.hypot(x-motorcycle.position.x,z-motorcycle.position.z)<1.15)return true;
  if(weaponPickup?.visible&&Math.hypot(x-weaponPickup.position.x,z-weaponPickup.position.z)<.65)return true;
  for(const enemy of enemies){if(!enemy.userData.dead&&Math.hypot(x-enemy.position.x,z-enemy.position.z)<.78)return true}
