@@ -447,7 +447,7 @@ setTimeout(()=>{galleryEnabled=!!(FBXLoader||GLTFLoader);if(galleryEnabled)updat
 // Interactive battlefield assets: reusable road, abandoned buildings, motorcycle and weapon pickup.
 const pickupButton=document.querySelector('#pickupWeapon'),mountButton=document.querySelector('#mountBike'),interactButton=document.querySelector('#interactWorld');
 let weaponPickup=null, motorcycle=null, ridingBike=false, bikeModelReady=false;
-const abandonedBuildings=[], roadSegments=[],doorInteractables=[],fallbackRubble=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=false,meshyBuildingLoadSucceeded=false;
+const abandonedBuildings=[], roadSegments=[],doorInteractables=[],fallbackRubble=[];let abandonedBuildingModelReady=false,generatedRoadModelReady=true,meshyBuildingLoadSucceeded=false;
 function makeInteractiveDoor(x,z,rotation=0){
  const rootDoor=new THREE.Group();rootDoor.position.set(x,0,z);rootDoor.rotation.y=rotation;scene.add(rootDoor);
  const frameMat=new THREE.MeshStandardMaterial({color:0x454f55,metalness:.55,roughness:.7});
@@ -491,7 +491,7 @@ function makeRoadFallback(z){
 for(let i=0;i<8;i++)makeRoadFallback(-8-i*10);
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeAbandonedBuilding(p[0],p[1],p[2]);
 // Hide procedural stand-ins while the clean Meshy city assets load; reveal them only if the model download fails.
-roadSegments.forEach(m=>m.visible=false);abandonedBuildings.forEach(m=>m.visible=false);fallbackRubble.forEach(m=>m.visible=false);
+abandonedBuildings.forEach(m=>m.visible=false);fallbackRubble.forEach(m=>m.visible=false);
 function makeMotorcycleFallback(){
  const g=new THREE.Group();
  const rubber=new THREE.MeshStandardMaterial({color:0x171b1d,roughness:.98}),metal=new THREE.MeshStandardMaterial({color:0x39454b,metalness:.65,roughness:.4}),lamp=new THREE.MeshStandardMaterial({color:0x8df5ff,emissive:0x1c91a8,emissiveIntensity:1.4});
@@ -530,16 +530,7 @@ loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template
   const b=placeWorldModel(template,p[0],p[1],buildingScale,p[2]);abandonedBuildings.push(b);createRubble(p[0],p[1]+2.6,Math.floor(Math.abs(p[0]*13+p[1]*7))+3);
  }
 },()=>{roadSegments.forEach(m=>m.visible=true);abandonedBuildings.forEach(m=>m.visible=true);fallbackRubble.forEach(m=>m.visible=true)});
-loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',template=>{
- roadSegments.forEach(m=>scene.remove(m));roadSegments.length=0;generatedRoadModelReady=true;
- const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3());
- const alongX=size.x>size.z,segLength=Math.max(size.x,size.z),targetLength=10;
- const scale=targetLength/Math.max(.01,segLength);
- for(let i=0;i<8;i++){
-  const m=template.clone(true);m.scale.multiplyScalar(scale);if(alongX)m.rotation.y=Math.PI/2;
-  m.position.set(0,.02,-8-i*10);m.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere()}});scene.add(m);roadSegments.push(m);
- }
-},()=>{roadSegments.forEach(m=>m.visible=true)});
+// Keep the clean, flat procedural asphalt lane; the Meshy road GLB had an oversized wedge profile and is not rendered.
 motorcycle=new THREE.Group();motorcycle.position.set(7,0,3);scene.add(motorcycle);
 const fallbackBike=makeMotorcycleFallback();fallbackBike.visible=false;motorcycle.add(fallbackBike);
 loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',template=>{
