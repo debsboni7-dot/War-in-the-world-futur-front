@@ -99,6 +99,7 @@ jobs:
             const aimEnabled = await page.locator('#aim').evaluate(el => el.classList.contains('active'));
             console.log(JSON.stringify({result,afterTwoShots,afterReload,aimEnabled,pageErrors},null,2));
             if (!result.canvas || result.canvasSize[0] < 1 || result.canvasSize[1] < 1) throw new Error('Game canvas did not initialize');
+            if (result.worldAssets && (result.worldAssets.trees !== 0 || result.worldAssets.cityBuildings < 6)) throw new Error('Map must contain six clean city buildings and no trees');
             if (result.player && result.player.placeholderVisible) throw new Error('Primitive placeholder soldier must remain hidden');
             if (result.player && !['Meshy Ogo Rigged+Animated GLB','Meshy Ogo GLB'].includes(result.player.modelSource)) throw new Error('Generated human Ogo model was not loaded: '+result.player.modelSource);
             if (result.player && result.player.playerVisibleMeshes===0) throw new Error('No visible 3D mesh found under the player root');
