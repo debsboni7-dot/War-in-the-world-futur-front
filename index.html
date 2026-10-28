@@ -535,7 +535,7 @@ loadReusableGLB('assets/models/generated/batiment-abandonne-debris.glb',template
   const b=placeWorldModel(template,p[0],p[1],1.0,p[2]);abandonedBuildings.push(b);createRubble(p[0],p[1]+2.6,Math.floor(Math.abs(p[0]*13+p[1]*7))+3);
  }
 });
-loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee.glb',template=>{
+loadReusableGLB('assets/models/generated/segment-route-asphalte-abimee-v2.glb',template=>{
  roadSegments.forEach(m=>scene.remove(m));roadSegments.length=0;
  const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3());
  const alongX=size.x>size.z,segLength=Math.max(size.x,size.z),targetLength=10;
