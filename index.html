@@ -369,9 +369,9 @@ async function updateModelGallery(now){
  if(!galleryEnabled||now<galleryCheckAt||galleryBusy)return;galleryCheckAt=now+1200;
  const px=player.position.x,pz=player.position.z;
  const loaded=galleryAssets.find(a=>a.loaded);
- if(loaded&&Math.hypot(px-loaded.x,pz-loaded.z)>48)disposeGalleryAsset(loaded);
+ if(loaded&&Math.hypot(px-loaded.x,pz-loaded.z)>23)disposeGalleryAsset(loaded);
  if(galleryAssets.some(a=>a.loaded))return;
- let best=null,bestDist=34;
+ let best=null,bestDist=16;
  for(let i=0;i<galleryAssets.length;i++){
   const idx=(galleryCursor+i)%galleryAssets.length,a=galleryAssets[idx],dist=Math.hypot(px-a.x,pz-a.z);
   if(!a.failed&&now>=a.nextTry&&dist<bestDist){best=a;bestDist=dist}
