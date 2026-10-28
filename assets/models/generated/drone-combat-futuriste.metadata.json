@@ -1,0 +1,12 @@
+{
+  "name": "drone-combat-futuriste",
+  "prompt": "Recovered completed Meshy task; original prompt was recorded in issue history.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a182ad-4cfa-73ec-bc0f-923b4531e4a5",
+  "texture_task_id": "01a182ae-087f-712b-b0f0-6022a76d5ca4",
+  "generated_at": "2026-10-28T13:26:31.133Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
