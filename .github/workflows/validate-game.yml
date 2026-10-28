@@ -162,6 +162,15 @@ jobs:
             const ammoAfterPickup = await page.locator('#ammo').textContent();
             console.log(JSON.stringify({bikeVisibleNear,mounted,dismounted,pickupVisibleNear,ammoBeforePickup,ammoAfterPickup},null,2));
             if(!bikeVisibleNear||!mounted||!dismounted||!playerVisibleWhileMounted) throw new Error('Motorcycle proximity/mount/player-visibility interaction failed');
+            await page.evaluate(() => window.__warInteractionTest.moveNearDoor());
+            const doorButtonVisible = await page.locator('#interactWorld').evaluate(el => el.classList.contains('visible'));
+            const closedDoorSolid = await page.evaluate(() => window.__warInteractionTest.collisionAt(-10,-12.8));
+            await page.locator('#interactWorld').dispatchEvent('pointerdown',{pointerId:94,pointerType:'touch',bubbles:true,cancelable:true});
+            const doorOpened = await page.evaluate(() => window.__warInteractionTest.nearestDoorOpen());
+            const openDoorPassage = !(await page.evaluate(() => window.__warInteractionTest.collisionAt(-10,-12.8)));
+            await page.locator('#interactWorld').dispatchEvent('pointerdown',{pointerId:95,pointerType:'touch',bubbles:true,cancelable:true});
+            const doorClosedAgain = await page.evaluate(() => window.__warInteractionTest.nearestDoorOpen()===false);
+            if(!doorButtonVisible||!closedDoorSolid||!doorOpened||!openDoorPassage||!doorClosedAgain) throw new Error('Door interaction/collision/entry test failed');
             if(!pickupVisibleNear||ammoAfterPickup===ammoBeforePickup) throw new Error('Weapon pickup interaction failed');
             if (mobileState.fps === '0') console.warn('WARNING: Chromium software-rendered FPS counter is 0; this is not a real-device FPS benchmark.');
             await browser.close();
