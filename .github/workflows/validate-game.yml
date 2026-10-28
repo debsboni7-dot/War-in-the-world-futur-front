@@ -76,6 +76,7 @@ jobs:
             await page.waitForTimeout(12000);
             await page.waitForFunction(() => typeof window.__warPlayerTestState==='function' && ['Meshy Ogo Rigged+Animated GLB','Meshy Ogo GLB'].includes(window.__warPlayerTestState().modelSource), null, {timeout:30000});
             await page.waitForFunction(() => {const s=window.__warWorldAssetTestState?.();return !!s&&s.abandonedBuildingModelReady&&s.generatedRoadModelReady&&s.bikeModelReady}, null, {timeout:45000});
+            await page.waitForFunction(() => {const a=window.__warPlayerTestState?.().animationClips||[];return a.some(n=>/walk/i.test(n))&&a.some(n=>/run/i.test(n))}, null, {timeout:30000});
             await page.screenshot({path:'/tmp/war-game-preview.png'});
             const result = await page.evaluate(() => ({
               worldAssets: typeof window.__warWorldAssetTestState==='function'?window.__warWorldAssetTestState():null,
