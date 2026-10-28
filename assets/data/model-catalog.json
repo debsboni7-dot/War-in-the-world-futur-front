@@ -1,8 +1,8 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
-  "version": 1,
-  "status": "inventory-and-size-audit",
-  "note": "Categories are provisional and inferred from filenames. File sizes are from the GitHub tree. The FBX binary contents have not been parsed or visually inspected, so geometry, UVs, materials, embedded/external textures, triangle counts, scale and rigging remain unverified. Do not load these FBX files into the mobile scene until each has been converted and tested as optimized GLB.",
+  "version": 2,
+  "status": "inventory-updated-with-meshy-drone",
+  "note": "Model inventory combines repository presence and runtime references. Binary geometry, visual quality, UVs, texture dimensions, triangle counts and device performance remain unverified unless explicitly noted.",
   "mobilePolicy": {
     "runtimeFormat": "glb",
     "loadOnDemand": true,
@@ -302,6 +302,24 @@
         "texturesVerified": false,
         "optimizedGlbAvailable": false
       }
+    },
+    {
+      "id": "drone-combat-futuriste",
+      "category": "enemies",
+      "label": "compact combat drone",
+      "source": "assets/models/generated/drone-combat-futuriste.glb",
+      "format": "glb",
+      "runtimeReady": true,
+      "sizeBytes": 5918264,
+      "sizeMiB": 5.64,
+      "validation": {
+        "filePresent": true,
+        "binaryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "optimizedGlbAvailable": true
+      },
+      "note": "Meshy 6 Lite GLB with PBR texturing; loaded on demand after the initial scene. Requires on-device visual and performance verification."
     }
   ]
 }
