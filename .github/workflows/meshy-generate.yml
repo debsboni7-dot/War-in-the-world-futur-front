@@ -88,35 +88,47 @@ jobs:
             const output = path.join('assets', 'models', 'generated', `${name}.glb`);
             if (fs.existsSync(output)) throw new Error(`Le modèle ${name}.glb existe déjà : aucun écrasement automatique autorisé.`);
 
-            console.log('Étape 1/2 : création du maillage Meshy (cela consomme des crédits).');
-            const preview = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
-              method: 'POST',
-              body: JSON.stringify({
-                mode: 'preview',
-                prompt,
-                ai_model: 'meshy-6-lite',
-                target_formats: ['glb'],
-                should_remesh: true,
-                target_polycount: 20000
-              })
-            });
-            if (!preview.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche preview.');
-            const previewTask = await waitForTask(preview.result);
+            let previewTask, finalTask;
+            const recovery = prompt.match(/^RECOVER_TASKS=([0-9a-f-]+),([0-9a-f-]+)$/i);
+            if (recovery) {
+              // Recover already-completed tasks after a Git push conflict; this path spends no new Meshy credits.
+              console.log('Récupération de tâches Meshy déjà terminées — aucune nouvelle génération.');
+              previewTask = await api(`https://api.meshy.ai/openapi/v2/text-to-3d/${recovery[1]}`, { method: 'GET' });
+              finalTask = await api(`https://api.meshy.ai/openapi/v2/text-to-3d/${recovery[2]}`, { method: 'GET' });
+              if (previewTask.status !== 'SUCCEEDED' || finalTask.status !== 'SUCCEEDED') {
+                throw new Error(`Tâches de récupération non terminées : mesh=${previewTask.status}, texture=${finalTask.status}`);
+              }
+            } else {
+              console.log('Étape 1/2 : création du maillage Meshy (cela consomme des crédits).');
+              const preview = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
+                method: 'POST',
+                body: JSON.stringify({
+                  mode: 'preview',
+                  prompt,
+                  ai_model: 'meshy-6-lite',
+                  target_formats: ['glb'],
+                  should_remesh: true,
+                  target_polycount: 20000
+                })
+              });
+              if (!preview.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche preview.');
+              previewTask = await waitForTask(preview.result);
 
-            console.log('Étape 2/2 : texturation PBR (cela consomme aussi des crédits).');
-            const refine = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
-              method: 'POST',
-              body: JSON.stringify({
-                mode: 'refine',
-                preview_task_id: previewTask.id || preview.result,
-                ai_model: 'meshy-6-lite',
-                enable_pbr: true,
-                auto_size: true,
-                target_formats: ['glb']
-              })
-            });
-            if (!refine.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche de texturation.');
-            const finalTask = await waitForTask(refine.result);
+              console.log('Étape 2/2 : texturation PBR (cela consomme aussi des crédits).');
+              const refine = await api('https://api.meshy.ai/openapi/v2/text-to-3d', {
+                method: 'POST',
+                body: JSON.stringify({
+                  mode: 'refine',
+                  preview_task_id: previewTask.id || preview.result,
+                  ai_model: 'meshy-6-lite',
+                  enable_pbr: true,
+                  auto_size: true,
+                  target_formats: ['glb']
+                })
+              });
+              if (!refine.result) throw new Error('Meshy n’a pas renvoyé l’identifiant de la tâche de texturation.');
+              finalTask = await waitForTask(refine.result);
+            }
             const url = finalTask.model_urls?.glb;
             if (!url) throw new Error('La tâche a réussi mais Meshy n’a pas fourni d’URL GLB.');
 
@@ -129,7 +141,7 @@ jobs:
             fs.writeFileSync(output, bytes);
             fs.writeFileSync(path.join(path.dirname(output), `${name}.metadata.json`), JSON.stringify({
               name,
-              prompt,
+              prompt: recovery ? 'Recovered completed Meshy task; original prompt was recorded in issue history.' : prompt,
               provider: 'Meshy API',
               model: 'meshy-6-lite',
               format: 'glb',
@@ -158,4 +170,12 @@ jobs:
             exit 1
           fi
           git commit -m "Add Meshy-generated 3D asset"
-          git push
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            echo "Push conflict; rebasing on latest main (attempt $attempt)"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort || true; sleep 2; }
+            sleep 2
+          done
+          echo "Push failed after retries"
+          exit 1
