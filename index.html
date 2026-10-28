@@ -198,9 +198,11 @@ if(GLTFLoader){
  const playerLoader=new GLTFLoader();
  const loadOriginalOgo=()=>playerLoader.load('assets/models/generated/ogo-player-character-v2.glb',gltf=>acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo GLB'),undefined,e=>{console.warn('Generated Ogo GLB unavailable; trying existing compatibility model.',e);loadLegacyPlayer()});
  playerLoader.load('assets/models/generated/ogo-player-character-rigged-animated.glb',gltf=>{
-  const clips=gltf.animations||[];
-  if(clips.length){acceptPlayerModel(gltf.scene,clips,'Meshy Ogo Rigged+Animated GLB');}
-  else{console.warn('Rigged Ogo file has no animation clips; loading the base character instead.');loadOriginalOgo();}
+  const clips=[...(gltf.animations||[])];
+  const animationFiles=['assets/models/generated/ogo-walking-meshy.glb','assets/models/generated/ogo-running-meshy.glb'];
+  let pending=animationFiles.length;
+  const finish=()=>{if(--pending===0){if(clips.length)acceptPlayerModel(gltf.scene,clips,'Meshy Ogo Rigged+Animated GLB');else{console.warn('Rigged Ogo has no usable animation clips; loading base character.');loadOriginalOgo()}}};
+  for(const url of animationFiles)playerLoader.load(url,animGltf=>{clips.push(...(animGltf.animations||[]));finish()},undefined,()=>finish());
  },undefined,e=>{console.info('Rigged Meshy model not published yet; loading base Ogo.',e);loadOriginalOgo()});
 }else loadLegacyPlayer();
 function attachWeaponToHand(){
