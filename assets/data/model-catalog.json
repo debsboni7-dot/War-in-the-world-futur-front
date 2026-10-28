@@ -1,9 +1,9 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
-  "version": 3,
-  "status": "all-repository-models-wired-to-runtime-or-fallback",
+  "version": 4,
+  "status": "generated-assets-integrated-visual-and-device-verification-pending",
   "updatedAt": "2026-10-28",
-  "note": "Every 3D file in assets/models is inventoried. Most unused models are loaded one at a time only when the player approaches their display points to protect mobile memory. Geometry, textures, visual quality and device performance still require runtime visual verification.",
+  "note": "New Meshy GLBs for Ogo, the abandoned building, modular road and motorcycle are wired into the runtime. File presence and browser interaction tests are being verified; geometry appearance, 4K/PBR visual quality and real Samsung-device performance are not yet visually confirmed.",
   "mobilePolicy": {
     "loadAllAtStartup": false,
     "streamGalleryOneModelAtATime": true,
@@ -13,7 +13,8 @@
       "glb",
       "fbx"
     ],
-    "fallback": "keep playable lightweight fallbacks"
+    "fallback": "keep playable lightweight fallbacks",
+    "newGeneratedAssetsQueue": "Only one of the large reusable environment GLBs is loaded at a time to reduce simultaneous download/decode spikes."
   },
   "models": [
     {
@@ -518,6 +519,74 @@
       "sizeBytes": 1668780,
       "runtimeReady": true,
       "loadStrategy": "proximity-streamed gallery",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "ogo-player-character-v2",
+      "category": "character",
+      "label": "Ogo — human male playable character",
+      "source": "assets/models/generated/ogo-player-character-v2.glb",
+      "format": "glb",
+      "sizeBytes": 6520956,
+      "runtimeReady": true,
+      "loadStrategy": "main player; preferred GLB with legacy fallback",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "batiment-abandonne-debris",
+      "category": "structures",
+      "label": "Abandoned building with debris",
+      "source": "assets/models/generated/batiment-abandonne-debris.glb",
+      "format": "glb",
+      "sizeBytes": 7225400,
+      "runtimeReady": true,
+      "loadStrategy": "shared model cloned at multiple world locations",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "segment-route-asphalte-abimee-v2",
+      "category": "environment",
+      "label": "Damaged modular asphalt road",
+      "source": "assets/models/generated/segment-route-asphalte-abimee-v2.glb",
+      "format": "glb",
+      "sizeBytes": 7214856,
+      "runtimeReady": true,
+      "loadStrategy": "shared modular segment; sequential GLB queue",
+      "validation": {
+        "filePresent": true,
+        "geometryParsed": false,
+        "visualInspection": false,
+        "texturesVerified": false,
+        "devicePerformanceVerified": false
+      }
+    },
+    {
+      "id": "moto-militaire-futuriste-v2",
+      "category": "vehicles",
+      "label": "Futuristic military motorcycle",
+      "source": "assets/models/generated/moto-militaire-futuriste-v2.glb",
+      "format": "glb",
+      "sizeBytes": 7644560,
+      "runtimeReady": true,
+      "loadStrategy": "proximity interaction; sequential GLB queue",
       "validation": {
         "filePresent": true,
         "geometryParsed": false,
