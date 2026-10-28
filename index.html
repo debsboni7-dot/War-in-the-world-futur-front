@@ -213,7 +213,7 @@ function loadLegacyPlayer(){
  new FBXLoader().load('assets/models/robots/Meshy_AI_Create_a_realistic_futuristic_military_20261025_generate.fbx',model=>acceptPlayerModel(model,model.animations||[],'legacy FBX fallback'),undefined,e=>{console.error('Legacy player model failed:',e);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo indisponible : vérifie la connexion')});
 }
 if(GLTFLoader){
- new GLTFLoader().load('assets/models/generated/ogo-player-character.glb',gltf=>acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo GLB'),undefined,e=>{console.warn('Generated Ogo GLB not yet available; using existing model temporarily.',e);loadLegacyPlayer()});
+ new GLTFLoader().load('assets/models/generated/ogo-player-character-v2.glb',gltf=>acceptPlayerModel(gltf.scene,gltf.animations||[],'Meshy Ogo GLB'),undefined,e=>{console.warn('Generated Ogo GLB not yet available; using existing model temporarily.',e);loadLegacyPlayer()});
 }else loadLegacyPlayer();
 function attachWeaponToHand(){
  if(!weaponModel)return;
