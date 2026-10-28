@@ -161,7 +161,7 @@ function choosePlayerAction(type){requestedPlayerAction=type;const patterns={idl
 function setMountTransition(type){mountTransition=.72;mountTransitionType=type;choosePlayerAction(type);}
 function findRightHand(rootModel){
  let found=null;
- rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z0-9]/g,'');if(['righthand','handr','mixamorig:righthand','bip01rhand','rightwrist','handright','mixamoriglefthand'].includes(n)||(/right/.test(n)&&(/hand/.test(n)||/wrist/.test(n))))found=o});
+ rootModel.traverse(o=>{if(found||!o.isBone)return;const n=o.name.toLowerCase().replace(/[^a-z0-9]/g,'');if(['righthand','handr','mixamorigrighthand','bip01rhand','rightwrist','handright'].includes(n)||(/right/.test(n)&&(/hand/.test(n)||/wrist/.test(n))))found=o});
  return found;
 }
 // Prefer the purpose-built human Ogo GLB; the old FBX is only a temporary compatibility fallback.
@@ -214,7 +214,7 @@ function attachWeaponToHand(){
  if(hand){
   weaponModel.parent?.remove(weaponModel);hand.add(weaponModel);
   // Conservative hand grip placement; fine alignment can be tuned after a visual test.
-  weaponModel.position.set(.12,-.015,-.05);weaponModel.rotation.set(-.08,Math.PI/2,0);
+  weaponModel.position.set(.035,-.025,-.09);weaponModel.rotation.set(0,0,0);
   weaponAnchor='right-hand bone';
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
@@ -233,7 +233,7 @@ function prepareWeaponModel(model){
   model.traverse(o=>{if(!o.isMesh)return;o.frustumCulled=true;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(mat=>{if(!mat)return;if(!mat.map){mat.map=metalTex;mat.color?.set(0xffffff);mat.userData=mat.userData||{};mat.userData.proceduralFallbackTexture=true}mat.roughness=Math.max(.42,mat.roughness??.7);mat.metalness=Math.max(.18,mat.metalness??0);if(mat.emissive){mat.emissive.set(0x10191d);mat.emissiveIntensity=.3}mat.needsUpdate=true})});
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.0001)throw new Error('Invalid weapon bounds');
-  model.scale.multiplyScalar((.72/maxDim)*1.15);weaponModel=model;attachWeaponToHand();gun.visible=false;
+  model.scale.multiplyScalar(.82/Math.max(size.x,size.y,size.z));weaponModel=model;attachWeaponToHand();gun.visible=false;
  }catch(e){console.warn('Weapon model invalid; using fallback.',e);gun.visible=true}
 }
 let weaponFallbackStarted=false;
@@ -567,12 +567,12 @@ function addExistingWorldGLB(url,x,z,targetSize,label,rotation=0){
  },error=>console.warn('Existing Meshy asset not available; scene fallback retained:',label,error));
 }
 // Helicopter parked on the outer edge of the combat zone.
-addExistingWorldGLB(EXISTING_MESHY_HELICOPTER,25,-44,10,'Meshy helicopter',Math.PI*.5);
+addExistingWorldGLB(EXISTING_MESHY_HELICOPTER,25,-44,16,'Meshy aircraft',Math.PI*.5);
 // The previously generated tree is reused at three perimeter locations, away from the main road.
 function addExistingTreeCopies(){
  loadReusableGLB(EXISTING_MESHY_TREE,template=>{
   for(const [x,z,rot] of [[25,-14,.2],[27,-29,1.1],[27,-64,2.2]]){
-   const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z),fit=4.5/Math.max(.001,largest),model=template.clone(true);
+   const bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z),fit=6/Math.max(.001,largest),model=template.clone(true);
    model.scale.multiplyScalar(fit);model.position.set(x-center.x*fit,-bounds.min.y*fit,z-center.z*fit);model.rotation.y=rot;
    model.traverse(o=>{if(o.isMesh){o.frustumCulled=true;if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();}});
    scene.add(model);streamedModels.push({model,label:'Meshy tree',position:new THREE.Vector3(x,0,z)});
@@ -598,25 +598,21 @@ loadReusableGLB('assets/models/generated/moto-militaire-futuriste-v2.glb',templa
  motorcycle.remove(fallbackBike);const b=template.clone(true),bounds=new THREE.Box3().setFromObject(b),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
  const fitScale=2.3/Math.max(.01,largest);b.scale.multiplyScalar(fitScale);b.position.set(-center.x*fitScale,-bounds.min.y*fitScale,-center.z*fitScale);motorcycle.add(b);bikeModelReady=true;
 },()=>{fallbackBike.visible=true});
-weaponPickup=new THREE.Group();weaponPickup.position.set(4.2,0,2.5);scene.add(weaponPickup);
+weaponPickup=null; // No ground weapon props: the equipped rifle belongs only in the soldier's hand.
 const pickupGlow=new THREE.Mesh(new THREE.TorusGeometry(.42,.055,6,18),new THREE.MeshBasicMaterial({color:0x6cf7ff}));
 pickupGlow.rotation.x=Math.PI/2;pickupGlow.position.y=.06;weaponPickup.add(pickupGlow);
 const pickupFallback=new THREE.Mesh(new THREE.BoxGeometry(.18,.15,.9),new THREE.MeshStandardMaterial({color:0x26343b,metalness:.65,roughness:.4}));pickupFallback.position.y=.35;pickupFallback.rotation.y=-.35;pickupFallback.visible=false;weaponPickup.add(pickupFallback);
-loadReusableGLB('assets/models/generated/railgun-electromagnetique.glb',template=>{
- weaponPickup.remove(pickupFallback);const m=template.clone(true),bounds=new THREE.Box3().setFromObject(m),size=bounds.getSize(new THREE.Vector3()),largest=Math.max(size.x,size.y,size.z);
- m.scale.multiplyScalar(.9/Math.max(.01,largest));m.position.y=.25;weaponPickup.add(m);
-},()=>{pickupFallback.visible=true});
+
 function closestDoor(){let best=null,bestD=Infinity;for(const d of doorInteractables){const dx=player.position.x-d.x,dz=player.position.z-d.z,dist=Math.hypot(dx,dz);if(dist<bestD){best=d;bestD=dist}}return best&&bestD<3.4?best:null}
 function updateContextActions(){
  const distBike=Math.hypot(player.position.x-motorcycle.position.x,player.position.z-motorcycle.position.z);
- const distWeapon=weaponPickup?.visible?Math.hypot(player.position.x-weaponPickup.position.x,player.position.z-weaponPickup.position.z):Infinity;
  const door=closestDoor();interactButton.classList.toggle('visible',!!door&&!ridingBike);interactButton.textContent=door?(door.open?'FERMER LA PORTE':'OUVRIR LA PORTE'):'INTERAGIR';
  mountButton.classList.toggle('visible',ridingBike||distBike<3.1);
  mountButton.textContent=ridingBike?'DESCENDRE DE LA MOTO':'MONTER SUR LA MOTO';
- pickupButton.classList.toggle('visible',!!weaponPickup?.visible&&distWeapon<2.5);
+ pickupButton.classList.remove('visible');
 }
 interactButton.addEventListener('pointerdown',e=>{e.preventDefault();const d=closestDoor();if(!d||ridingBike)return;d.open=!d.open;d.hinge.rotation.y=d.open?-Math.PI*.78:0;showMessage(d.open?'Porte ouverte':'Porte fermée');updateContextActions()});
-pickupButton.addEventListener('pointerdown',e=>{e.preventDefault();if(!weaponPickup?.visible||Math.hypot(player.position.x-weaponPickup.position.x,player.position.z-weaponPickup.position.z)>2.7)return;weaponPickup.visible=false;reserveAmmo+=30;updateAmmoDisplay();if(weaponModel)attachWeaponToHand();showMessage('Arme équipée · +30 munitions');updateContextActions()});
+pickupButton.hidden=true;pickupButton.classList.remove('visible');
 mountButton.addEventListener('pointerdown',e=>{
  e.preventDefault();
  if(ridingBike){ridingBike=false;player.position.x=motorcycle.position.x+1.35;player.position.z=motorcycle.position.z;player.position.y=0;if(militaryModel)militaryModel.position.y=0;playerModelVisibility(true);setMountTransition('dismount');showMessage('Tu descends de la moto');}
