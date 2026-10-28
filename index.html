@@ -167,12 +167,16 @@ function findRightHand(rootModel){
 // Prefer the purpose-built human Ogo GLB; the old FBX is only a temporary compatibility fallback.
 function acceptPlayerModel(model,animations=[],source='unknown'){
  try{
-  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model,true),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
   const maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid player model bounds');
   const height=Math.max(size.y,.001),scale=1.85/height;
   model.scale.multiplyScalar(scale);
   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.updateMatrixWorld(true);
+  let fittedBounds=new THREE.Box3().setFromObject(model,true),fittedSize=fittedBounds.getSize(new THREE.Vector3());
+  if(Number.isFinite(fittedSize.y)&&fittedSize.y>0.01&&(fittedSize.y>2.15||fittedSize.y<1.55)){const correction=1.85/fittedSize.y;model.scale.multiplyScalar(correction);model.updateMatrixWorld(true);fittedBounds=new THREE.Box3().setFromObject(model,true);const fittedCenter=fittedBounds.getCenter(new THREE.Vector3());model.position.x-=fittedCenter.x;model.position.y-=fittedBounds.min.y;model.position.z-=fittedCenter.z;model.updateMatrixWorld(true)}
   model.traverse(o=>{
    if(!o.isMesh)return;o.frustumCulled=true;
    if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
@@ -185,7 +189,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);for(const clip of militaryAnimations){if(/idle|stand|breath|walk|run|sprint|jump|shoot|fire|attack|reload|mount|dismount|ride|motorcycle|drive|sit/i.test(clip.name))playerActions[clip.name]=militaryMixer.clipAction(clip)}const idle=militaryAnimations.find(a=>/idle|stand|breath/i.test(a.name));if(idle){playerActions[idle.name].play();currentPlayerAction=idle.name;currentPlayerActionHasClip=true;console.info('Compatible idle animation:',idle.name)}}findRigBones(model);
   if(weaponModel)attachWeaponToHand();
   window.__warPlayerModelSource=source;
- window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
+ window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:Object.keys(playerRigBones).length,modelScale:militaryModel?.scale.toArray()||null,modelHeight:militaryModel?new THREE.Box3().setFromObject(militaryModel,true).getSize(new THREE.Vector3()).y:0,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
   console.info('Playable character model loaded:',source);
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
