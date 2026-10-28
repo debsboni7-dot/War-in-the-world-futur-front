@@ -1,9 +1,9 @@
 {
   "title": "War in the World: Future Front — Model Catalog",
-  "version": 8,
-  "status": "clean-flat-city-road-rigged-ogo",
+  "version": 9,
+  "status": "clean-city-blocks-added-rigged-ogo-integrated",
   "updatedAt": "2026-10-28",
-  "note": "The live map uses a flat asphalt lane with lane markings instead of the oversized wedge-shaped Meshy road asset. Trees and the scattered weapon gallery are not rendered. Ogo is rigged by Meshy with walking/running clips, the weapon is attached to the right-hand bone, and closed doors are solid but open doors permit entry. Browser smoke tests cover movement, shooting, bike mount/dismount, weapon pickup and door entry; real Samsung-device FPS and final visual polish still need on-device confirmation.",
+  "note": "The live map uses a flat marked asphalt road, six clean modern city blocks with instanced windows, plus the Meshy ruined building asset. No tree meshes or scattered weapon gallery are rendered. Ogo uses the Meshy rig and loads compatible walking/running clips sequentially in the background; the firearm is attached to the right-hand bone, bullets have a visible moving projectile and tracer, and closed doors are solid but can be opened to enter. Additional paid Meshy action clips were blocked by the API key credit limit, so jump, reload, fire and mount/dismount use procedural poses. Browser smoke tests cover movement, shooting, weapon pickup, motorcycle mount/dismount and door entry; real Samsung FPS remains unverified.",
   "mobilePolicy": {
     "loadAllAtStartup": false,
     "streamGalleryOneModelAtATime": true,
@@ -264,7 +264,7 @@
       "format": "glb",
       "sizeBytes": 7098828,
       "runtimeReady": true,
-      "loadStrategy": "loaded with rigged Ogo at startup",
+      "loadStrategy": "streamed sequentially after the player appears",
       "validation": {
         "filePresent": true,
         "geometryParsed": false,
@@ -281,7 +281,7 @@
       "format": "glb",
       "sizeBytes": 7088208,
       "runtimeReady": true,
-      "loadStrategy": "loaded with rigged Ogo at startup",
+      "loadStrategy": "streamed sequentially after the player appears",
       "validation": {
         "filePresent": true,
         "geometryParsed": false,
