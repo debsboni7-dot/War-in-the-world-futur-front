@@ -24,8 +24,11 @@
     {
       "asset": "segment-route-asphalte-abimee-v2",
       "credits": 30,
-      "status": "reserved",
-      "created_at": "2026-10-28T14:42:29.998Z"
+      "status": "completed",
+      "created_at": "2026-10-28T14:42:29.998Z",
+      "mesh_task_id": "01a182f6-754a-74cb-b0c7-7ee5cebb9872",
+      "texture_task_id": "01a182f7-30c8-769b-8ac2-0ca22cd5c083",
+      "completed_at": "2026-10-28T14:44:05.957Z"
     }
   ],
   "future_reservation_credits": 30

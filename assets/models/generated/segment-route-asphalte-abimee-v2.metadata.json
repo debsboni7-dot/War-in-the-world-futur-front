@@ -1,0 +1,12 @@
+{
+  "name": "segment-route-asphalte-abimee-v2",
+  "prompt": "Create a reusable modular straight segment of realistic damaged asphalt road for a futuristic abandoned battlefield. Long rectangular road tile with cracked dark asphalt, worn faded lane markings, a few potholes, gravel along both edges and subtle dirt accumulation. Realistic PBR materials and UVs, clean low-to-medium poly game-ready geometry, optimize for mobile real-time use, modular ends that align seamlessly when repeated end-to-end, GLB output. No cars, people, signs, background, text or logos. Flat surface suitable for walking and driving. Name: segment-route-asphalte-abimee.",
+  "provider": "Meshy API",
+  "model": "meshy-6-lite",
+  "format": "glb",
+  "texture": "PBR",
+  "mesh_task_id": "01a182f6-754a-74cb-b0c7-7ee5cebb9872",
+  "texture_task_id": "01a182f7-30c8-769b-8ac2-0ca22cd5c083",
+  "generated_at": "2026-10-28T14:44:05.956Z",
+  "note": "GLB généré automatiquement. Vérifier visuellement et tester en jeu avant utilisation."
+}
