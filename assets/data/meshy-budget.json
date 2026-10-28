@@ -1,7 +1,7 @@
 {
   "budget_limit_credits": 200,
-  "reserved_credits": 50,
-  "available_credits": 150,
+  "reserved_credits": 80,
+  "available_credits": 120,
   "policy": "Hard cap for this authorized Meshy budget. Current completed Meshy 6 Lite asset is conservatively recorded at 20 credits (5 mesh + 15 texture per current API pricing). Every future generation reserves 30 credits before submitting (20 expected + 10 safety margin). Do not start if the reservation would exceed 200. Failed/refunded tasks remain reserved conservatively unless reconciled from Meshy usage records.",
   "reservations": [
     {
@@ -20,6 +20,12 @@
       "mesh_task_id": "01a182f1-4021-73f3-9f74-c3136dd16551",
       "texture_task_id": "01a182f2-3d0b-7296-ac5a-2608d620ffa8",
       "completed_at": "2026-10-28T14:38:57.561Z"
+    },
+    {
+      "asset": "segment-route-asphalte-abimee-v2",
+      "credits": 30,
+      "status": "reserved",
+      "created_at": "2026-10-28T14:42:29.998Z"
     }
   ],
   "future_reservation_credits": 30
