@@ -38,7 +38,7 @@ jobs:
             ['player rotation uses facing state, not camera yaw', /player\.rotation\.y\s*=\s*playerYaw\s*;/],
             ['camera shoulder offset', /const shoulder=aiming\s*\?\s*1\.05\s*:\s*1\.2/],
             ['shots follow camera crosshair', /ray\.setFromCamera\(new THREE\.Vector2\(0,0\),camera\)/],
-            ['instanced forest geometry', /new THREE\.InstancedMesh\(tree(?:Trunk|Crown)Geometry,tree(?:Trunk|Crown)Material,treeCount\)/],
+            ['tree-free urban map', /Urban combat zone: no trees or forest vegetation in the city map/],
             ['instanced outpost structures', /new THREE\.InstancedMesh\(new THREE\.BoxGeometry\(4,2\.5,3\)/],
             ['adaptive render scale for 29 FPS target', /measuredFps<29[\s\S]*renderScale-.05/],
             ['reduced mobile render scale', /isLowMemoryPhone\?0\.55:0\.78/]
@@ -49,7 +49,7 @@ jobs:
           const missing = [...new Set(refs)].filter(path => !fs.existsSync(path) && !optionalGenerated.has(path));
           if (missing.length) throw new Error('Missing model files:\n' + missing.join('\n'));
           console.log('JavaScript module extracted. Verified ' + (new Set(refs).size-missing.length) + ' present model paths; optional Meshy models have procedural fallbacks.');
-          for (const [label,pattern] of [['contextual bike interaction',/mountButton\.classList\.toggle\('visible',ridingBike\|\|distBike<3\.1\)/],['weapon pickup interaction',/pickupButton\.classList\.toggle\('visible',!!weaponPickup\?\.visible&&distWeapon<2\.5\)/],['high-resolution textures',/isLowMemoryPhone\?'2k':'4k'/],['no primitive soldier fallback',/placeholderParts\.forEach\(p=>p\.visible=false\);gun\.visible=false;showMessage\('Field test ready/]]) if(!pattern.test(html)) throw new Error('Missing required gameplay/visual feature: '+label);
+          for (const [label,pattern] of [['contextual bike interaction',/mountButton\.classList\.toggle\('visible',ridingBike\|\|distBike<3\.1\)/],['weapon pickup interaction',/pickupButton\.classList\.toggle\('visible',!!weaponPickup\?\.visible&&distWeapon<2\.5\)/],['interactive doors',/interactButton\.addEventListener\('pointerdown'/],['solid building and door collisions',/for\(const b of abandonedBuildings\)[\s\S]*?for\(const d of doorInteractables\)/],['visible bullet tracer',/const bulletTracer=new THREE\.Line/],['mounting keeps player visible',/playerModelVisibility\(true\);setMountTransition\('mount'\)/],['high-resolution textures',/isLowMemoryPhone\?'2k':'4k'/],['no primitive soldier fallback',/placeholderParts\.forEach\(p=>p\.visible=false\);gun\.visible=false;showMessage\('Field test ready/]]) if(!pattern.test(html)) throw new Error('Missing required gameplay/visual feature: '+label);
           NODE
           node --check /tmp/game-check.mjs
       - name: Install browser smoke-test tools
