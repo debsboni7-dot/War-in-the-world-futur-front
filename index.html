@@ -531,6 +531,10 @@ for(let i=0;i<8;i++)makeRoadFallback(-8-i*10);
 for(const p of [[-10,-15,0],[10,-25,Math.PI*.5],[-10,-45,0],[10,-55,Math.PI*.5],[-10,-75,0],[10,-85,Math.PI*.5]])makeAbandonedBuilding(p[0],p[1],p[2]);
 // Add clean modern building facades on both sides so the combat zone reads as a city, not an empty desert.
 for(const p of [[-16,-8,7.5,10,6.5,0x66747b],[16,-8,7.5,12,6.5,0x56666e],[-16,-38,7.5,12,6.5,0x707a7e],[16,-38,7.5,14,6.5,0x52636b],[-16,-68,7.5,11,6.5,0x5e6c72],[16,-68,7.5,13,6.5,0x748084]])makeCityBuilding(...p);finishCityWindows();
+// Download small CC0 photographic textures from Poly Haven; local procedural maps remain as offline fallbacks.
+loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_trail_02/rocky_trail_02_diff_1k.jpg',9,'ground');
+loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_001/concrete_wall_001_diff_1k.jpg',1,'concrete');
+loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate/metal_plate_diff_1k.jpg',1,'metal');
 // Hide procedural abandoned-building stand-ins while the clean Meshy assets load; the modern city blocks stay visible.
 abandonedBuildings.forEach(m=>m.visible=false);fallbackRubble.forEach(m=>m.visible=false);
 function makeMotorcycleFallback(){
