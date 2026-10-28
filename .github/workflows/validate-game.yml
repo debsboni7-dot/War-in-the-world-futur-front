@@ -56,6 +56,13 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
+      - name: Upload visual smoke-test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: war-game-preview
+          path: /tmp/war-game-preview.png
+          if-no-files-found: ignore
       - name: Launch the game in headless Chromium
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/war-game-server.log 2>&1 &
@@ -72,6 +79,7 @@ jobs:
             await page.waitForTimeout(12000);
             await page.waitForFunction(() => typeof window.__warPlayerTestState==='function' && window.__warPlayerTestState().modelSource==='Meshy Ogo GLB', null, {timeout:30000});
             await page.waitForFunction(() => {const s=window.__warWorldAssetTestState?.();return !!s&&s.abandonedBuildingModelReady&&s.generatedRoadModelReady&&s.bikeModelReady}, null, {timeout:45000});
+            await page.screenshot({path:'/tmp/war-game-preview.png'});
             const result = await page.evaluate(() => ({
               worldAssets: typeof window.__warWorldAssetTestState==='function'?window.__warWorldAssetTestState():null,
               canvas: !!document.querySelector('#game canvas'),
