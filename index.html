@@ -34,7 +34,7 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 const root=document.querySelector('#game'),message=document.querySelector('#message');
-function showFatalError(t){message.textContent=t;message.style.display='block';message.style.zIndex='1000';message.style.background='#300d12f2';message.style.borderColor='#ff5268';message.style.maxWidth='min(92%,560px)'}
+function showFatalError(t){clearTimeout(showMessage.timer);message.textContent=t;message.style.display='block';message.style.zIndex='1000';message.style.background='#300d12f2';message.style.borderColor='#ff5268';message.style.maxWidth='min(92%,560px)'}
 addEventListener('error',e=>{console.error('Game runtime error:',e.error||e.message);showFatalError('Erreur du jeu. Recharge la page ; si le problème persiste, vérifie la connexion et les modèles.')});
 addEventListener('unhandledrejection',e=>{console.error('Game startup error:',e.reason);showFatalError('Le jeu n’a pas pu démarrer. Vérifie la connexion Internet puis recharge la page.')});
 const isLowMemoryPhone = (navigator.deviceMemory && navigator.deviceMemory <= 4) || innerWidth < 500;
