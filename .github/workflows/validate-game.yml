@@ -142,6 +142,21 @@ jobs:
             for (const control of ['stick','fire','jump','reload','aim','run']) if (!mobileState[control]) throw new Error('Mobile control not visible: '+control);
             if (mobileErrors.length) throw new Error('Mobile JavaScript errors: '+mobileErrors.join(' | '));
             if (playerTravel < 0.2) throw new Error('Mobile joystick did not move the player; travelled '+playerTravel);
+            // Test proximity-only interaction buttons and their real pointer handlers.
+            await page.evaluate(() => window.__warInteractionTest.moveNearBike());
+            const bikeVisibleNear = await page.locator('#mountBike').evaluate(el => el.classList.contains('visible'));
+            await page.locator('#mountBike').dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch',bubbles:true,cancelable:true});
+            const mounted = await page.evaluate(() => window.__warPlayerTestState().ridingBike);
+            await page.locator('#mountBike').dispatchEvent('pointerdown',{pointerId:92,pointerType:'touch',bubbles:true,cancelable:true});
+            const dismounted = !(await page.evaluate(() => window.__warPlayerTestState().ridingBike));
+            await page.evaluate(() => window.__warInteractionTest.moveNearWeapon());
+            const pickupVisibleNear = await page.locator('#pickupWeapon').evaluate(el => el.classList.contains('visible'));
+            const ammoBeforePickup = await page.locator('#ammo').textContent();
+            await page.locator('#pickupWeapon').dispatchEvent('pointerdown',{pointerId:93,pointerType:'touch',bubbles:true,cancelable:true});
+            const ammoAfterPickup = await page.locator('#ammo').textContent();
+            console.log(JSON.stringify({bikeVisibleNear,mounted,dismounted,pickupVisibleNear,ammoBeforePickup,ammoAfterPickup},null,2));
+            if(!bikeVisibleNear||!mounted||!dismounted) throw new Error('Motorcycle proximity/mount interaction failed');
+            if(!pickupVisibleNear||ammoAfterPickup===ammoBeforePickup) throw new Error('Weapon pickup interaction failed');
             if (mobileState.fps === '0') console.warn('WARNING: Chromium software-rendered FPS counter is 0; this is not a real-device FPS benchmark.');
             await browser.close();
           })().catch(e => { console.error(e); process.exit(1); });
