@@ -38,3 +38,36 @@ jobs:
           console.log('JavaScript module extracted. Verified ' + new Set(refs).size + ' referenced model paths.');
           NODE
           node --check /tmp/game-check.mjs
+      - name: Install browser smoke-test tools
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Launch the game in headless Chromium
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/war-game-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({headless:true,args:['--no-sandbox','--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader']});
+            const page = await browser.newPage({viewport:{width:1280,height:800}});
+            const pageErrors = [];
+            page.on('pageerror', error => pageErrors.push(String(error)));
+            await page.goto('http://127.0.0.1:4173/index.html', {waitUntil:'domcontentloaded',timeout:45000});
+            await page.waitForTimeout(12000);
+            const result = await page.evaluate(() => ({
+              canvas: !!document.querySelector('#game canvas'),
+              canvasSize: (() => { const c=document.querySelector('#game canvas'); return c ? [c.width,c.height] : [0,0] })(),
+              fps: document.querySelector('#fps')?.textContent || '',
+              ammo: document.querySelector('#ammo')?.textContent || '',
+              message: document.querySelector('#message')?.textContent || '',
+              fatal: !!document.querySelector('#message') && getComputedStyle(document.querySelector('#message')).zIndex === '1000'
+            }));
+            console.log(JSON.stringify({result,pageErrors},null,2));
+            await browser.close();
+            if (!result.canvas || result.canvasSize[0] < 1 || result.canvasSize[1] < 1) throw new Error('Game canvas did not initialize');
+            if (pageErrors.length) throw new Error('Browser JavaScript errors: ' + pageErrors.join(' | '));
+            if (result.fatal) throw new Error('Game startup displayed a fatal error: ' + result.message);
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
