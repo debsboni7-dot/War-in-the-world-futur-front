@@ -49,7 +49,7 @@ if(!FBXLoader&&!GLTFLoader)showMessage('3D model loaders unavailable — fallbac
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb5bd);scene.fog=new THREE.Fog(0x9bb5bd,38,115);
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
 const renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.7:0.9));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
+let renderScale=isLowMemoryPhone?0.55:0.78;const minRenderScale=isLowMemoryPhone?0.42:0.58,maxRenderScale=isLowMemoryPhone?0.7:0.9;renderer.setPixelRatio(Math.min(devicePixelRatio||1,renderScale));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xdceeff,0x4b5945,2.0));const sun=new THREE.DirectionalLight(0xffe1b0,2.0);sun.position.set(-18,32,12);scene.add(sun);
 // Lightweight procedural ground texture: generated locally, no external asset/license dependency.
 function makeNoiseTexture(base,seed=1,repeat=1,detail='grain'){
@@ -81,7 +81,7 @@ const groundMat=new THREE.MeshStandardMaterial({map:groundTex,color:0xffffff,rou
 // Debug grid removed for a cleaner continuous battlefield terrain.
 function box(w,h,d,color,x,y,z,texture=null){const mat=new THREE.MeshStandardMaterial({color,map:texture,roughness:texture===metalTex ? .68 : .9,metalness:texture===metalTex ? .35 : 0});if(texture===concreteTex)mat.userData.photoKind='concrete';if(texture===metalTex)mat.userData.photoKind='metal';const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);scene.add(m);return m}
 // Instanced vegetation: two draw calls for the whole forest instead of one per tree part.
-const treeCount=isLowMemoryPhone?42:70;
+const treeCount=isLowMemoryPhone?28:56;
 const treeTrunkGeometry=new THREE.BoxGeometry(.35,2,.35);
 const treeCrownGeometry=new THREE.ConeGeometry(1.25,3,6);
 const treeTrunkMaterial=new THREE.MeshStandardMaterial({color:0xffffff,map:barkTex,roughness:1});
@@ -138,7 +138,13 @@ function shootHostile(){
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/gravel_embedded_concrete/gravel_embedded_concrete_diff_1k.jpg',24,'ground');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor/concrete_floor_diff_1k.jpg',2,'concrete');
 loadPhotoTexture('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_painted_metal/rusty_painted_metal_diff_1k.jpg',2,'metal');
-for(let i=0;i<9;i++){let x=(i%3-1)*9,z=-16-Math.floor(i/3)*7;box(4,2.5,3,0xffffff,x,1.25,z,concreteTex);box(4.2,.25,3.2,0xffffff,x,2.6,z,metalTex);box(.15,1.1,.15,0xffa640,x-1.4,1.3,z+1.56);box(.15,1.1,.15,0xffa640,x+1.4,1.3,z+1.56)}
+// Batch repeated outpost pieces into four instanced draw calls instead of 36 separate meshes.
+const outpostConcrete=new THREE.InstancedMesh(new THREE.BoxGeometry(4,2.5,3),new THREE.MeshStandardMaterial({color:0xffffff,map:concreteTex,roughness:.9}),9);
+const outpostRoof=new THREE.InstancedMesh(new THREE.BoxGeometry(4.2,.25,3.2),new THREE.MeshStandardMaterial({color:0xffffff,map:metalTex,roughness:.68,metalness:.35}),9);
+const outpostLights=new THREE.InstancedMesh(new THREE.BoxGeometry(.15,1.1,.15),new THREE.MeshStandardMaterial({color:0xffa640,emissive:0x6c3000,emissiveIntensity:.5}),18);
+const outpostTransform=new THREE.Object3D();
+for(let i=0;i<9;i++){const x=(i%3-1)*9,z=-16-Math.floor(i/3)*7;outpostTransform.position.set(x,1.25,z);outpostTransform.updateMatrix();outpostConcrete.setMatrixAt(i,outpostTransform.matrix);outpostTransform.position.set(x,2.6,z);outpostTransform.updateMatrix();outpostRoof.setMatrixAt(i,outpostTransform.matrix);for(let side=0;side<2;side++){outpostTransform.position.set(x+(side===0?-1.4:1.4),1.3,z+1.56);outpostTransform.updateMatrix();outpostLights.setMatrixAt(i*2+side,outpostTransform.matrix)}}
+scene.add(outpostConcrete,outpostRoof,outpostLights);
 // Player movement root: the military FBX is the visible character when loaded.
 const player=new THREE.Group();scene.add(player);
 const suit=new THREE.MeshStandardMaterial({color:0x344b59,roughness:.72}),armor=new THREE.MeshStandardMaterial({color:0x9ba9ad,metalness:.45,roughness:.48}),visor=new THREE.MeshStandardMaterial({color:0x32c9d0,metalness:.35,roughness:.25,emissive:0x07545a});
@@ -438,7 +444,7 @@ document.querySelector('#aim').addEventListener('click',()=>{aiming=!aiming;came
 document.querySelector('#jump').addEventListener('pointerdown',e=>{e.preventDefault();if(player.position.y<=.015){jumpVelocity=6.2;showMessage('Saut')}});
 document.querySelector('#reload').addEventListener('pointerdown',e=>{e.preventDefault();reloadWeapon()});
 document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shootHostile()});
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isLowMemoryPhone?0.7:0.9));renderer.setSize(innerWidth,innerHeight)}addEventListener('resize',resize);
+function applyRenderScale(){renderer.setPixelRatio(Math.min(devicePixelRatio||1,renderScale));renderer.setSize(innerWidth,innerHeight)}function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();applyRenderScale()}addEventListener('resize',resize);
 addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r'&&!e.repeat)reloadWeapon()});
 function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
@@ -446,7 +452,7 @@ const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=Array.from({length:9},(_,i)=>({x:(i%3-1)*9,z:-16-Math.floor(i/3)*7,hx:2.35,hz:1.85}));
 function isBlocked(x,z){for(const b of collisionBlocks){if(Math.abs(x-b.x)<b.hx&&Math.abs(z-b.z)<b.hz)return true}return false}
-function animate(now){if(fatalErrorActive)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){document.querySelector('#fps').textContent=Math.round(frames*1000/(now-fpsStamp));frames=0;fpsStamp=now}
+let fpsAdaptStamp=performance.now(),lowFpsWindows=0,highFpsWindows=0;function animate(now){if(fatalErrorActive)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);updateModelGallery(now);frames++;if(now-fpsStamp>1000){const measuredFps=Math.round(frames*1000/(now-fpsStamp));document.querySelector('#fps').textContent=measuredFps;if(now-fpsAdaptStamp>1800){if(measuredFps<29){lowFpsWindows++;highFpsWindows=0;if(lowFpsWindows>=1&&renderScale>minRenderScale){renderScale=Math.max(minRenderScale,renderScale-.05);applyRenderScale();lowFpsWindows=0}}else if(measuredFps>33){highFpsWindows++;lowFpsWindows=0;if(highFpsWindows>=4&&renderScale<maxRenderScale){renderScale=Math.min(maxRenderScale,renderScale+.025);applyRenderScale();highFpsWindows=0}}else{lowFpsWindows=0;highFpsWindows=0}fpsAdaptStamp=now}frames=0;fpsStamp=now}
 let ix=moveX,iy=moveY;if(keys.a||keys.arrowleft)ix-=1;if(keys.d||keys.arrowright)ix+=1;if(keys.w||keys.arrowup)iy-=1;if(keys.s||keys.arrowdown)iy+=1;const mag=Math.hypot(ix,iy);if(mag>1){ix/=mag;iy/=mag}
 const speed=(sprinting||keys.shift?9:5)*dt;if(player.position.y>0||jumpVelocity>0){player.position.y+=jumpVelocity*dt;jumpVelocity-=15*dt;if(player.position.y<=0){player.position.y=0;jumpVelocity=0}}const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
 
