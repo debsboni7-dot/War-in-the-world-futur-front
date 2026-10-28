@@ -216,7 +216,7 @@ function attachWeaponToHand(){
   // This rig's hand bone inherits a tiny scale. Compensate it so the rifle is ~0.82 m long in world space.
   hand.updateWorldMatrix(true,false);
   const hs=new THREE.Vector3();hand.getWorldScale(hs);
-  weaponModel.scale.set(weaponBaseScale/Math.max(.0001,hs.x),weaponBaseScale/Math.max(.0001,hs.y),weaponBaseScale/Math.max(.0001,hs.z));
+  weaponModel.scale.set((weaponBaseScale*.42)/Math.max(.0001,hs.x),(weaponBaseScale*.42)/Math.max(.0001,hs.y),weaponBaseScale/Math.max(.0001,hs.z));
   hand.add(weaponModel);
   // Apply the centering and palm grip in world-sized offsets despite the small inherited bone scale.
   weaponModel.position.set((weaponCenterOffset.x+.045)/Math.max(.0001,hs.x),(weaponCenterOffset.y-.055)/Math.max(.0001,hs.y),(weaponCenterOffset.z-.105)/Math.max(.0001,hs.z));
@@ -225,7 +225,7 @@ function attachWeaponToHand(){
  }else{
   // Attach to the movement root immediately, even if the character FBX is still loading.
   // If the character later loads, this same model is re-parented to its right hand.
-  weaponModel.parent?.remove(weaponModel);weaponModel.scale.setScalar(weaponBaseScale);player.add(weaponModel);
+  weaponModel.parent?.remove(weaponModel);weaponModel.scale.set(weaponBaseScale*.42,weaponBaseScale*.42,weaponBaseScale);player.add(weaponModel);
   weaponModel.position.set(.38,1.22,-.34);weaponModel.rotation.set(0,0,0);
   weaponAnchor=militaryModel?'fallback hand position':'player-root fallback position';
  }
