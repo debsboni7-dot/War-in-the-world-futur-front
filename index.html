@@ -787,7 +787,7 @@ const speed=(sprinting||keys.shift?9:5)*(ridingBike?2.2:1)*dt;if(player.position
  const nx=player.position.x+forward.x*(-iy*speed)+right.x*(ix*speed),nz=player.position.z+forward.z*(-iy*speed)+right.z*(ix*speed);
  if(!isBlocked(nx,player.position.z))player.position.x=THREE.MathUtils.clamp(nx,-95,95);
  if(!isBlocked(player.position.x,nz))player.position.z=THREE.MathUtils.clamp(nz,-95,95);
- if(mag>.08){const worldMoveX=forward.x*(-iy)+right.x*ix,worldMoveZ=forward.z*(-iy)+right.z*ix;playerYaw=Math.atan2(-worldMoveX,-worldMoveZ)}
+ if(mag>.08){const worldMoveX=forward.x*(-iy)+right.x*ix,worldMoveZ=forward.z*(-iy)+right.z*ix;playerYaw=Math.atan2(-worldMoveX,-worldMoveZ)+Math.PI}
  if(ridingBike){motorcycle.position.set(player.position.x,0,player.position.z);motorcycle.rotation.y=playerYaw;if(militaryModel){militaryModel.visible=true;militaryModel.position.y=THREE.MathUtils.lerp(militaryModel.position.y,.48,Math.min(1,dt*8));}}
  else if(militaryModel&&militaryModel.position.y!==0&&mountTransition<=0)militaryModel.position.y=0;
  player.rotation.y=playerYaw;updateContextActions();
