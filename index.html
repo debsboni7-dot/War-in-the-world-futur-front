@@ -181,11 +181,14 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
   const maxDim=Math.max(size.x,size.y,size.z);
   if(!Number.isFinite(maxDim)||maxDim<.001)throw new Error('Invalid player model bounds');
-  // Meshy's rigged skin can render larger than the bind-pose bounds, so apply a conservative visual scale correction without a costly per-vertex bounds scan.
-  const height=Math.max(size.y,.001),scale=(1.85/height)*.4;
-  model.scale.multiplyScalar(scale);
-  model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
-  model.updateMatrixWorld(true);playerMeasuredHeight=1.85;
+  // The existing Meshy Ogo GLBs are authored at 1.8 m. Box3 can underestimate a skinned mesh's bind pose, so do not scale the soldier from that misleading bound.
+  const isOgoGLB=/Meshy Ogo/.test(source);
+  const height=isOgoGLB?1.8:Math.max(size.y,.001);
+  const scale=isOgoGLB?(1.85/1.8):(1.85/height);
+  model.scale.setScalar(scale);
+  if(isOgoGLB)model.position.set(0,0,0);
+  else model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  model.updateMatrixWorld(true);playerMeasuredHeight=height*scale;
   model.traverse(o=>{
    if(!o.isMesh)return;o.frustumCulled=true;
    if(o.geometry?.attributes?.position)o.geometry.computeBoundingSphere();
@@ -198,7 +201,7 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   if(militaryAnimations.length){militaryMixer=new THREE.AnimationMixer(model);for(const clip of militaryAnimations)playerActions[clip.name]=militaryMixer.clipAction(clip);const idle=getPlayerIdleClip();if(idle){playerActions[idle.name].reset().play();currentPlayerAction=idle.name;currentPlayerActionHasClip=true;console.info('Meshy base/idle animation:',idle.name)}}
   if(weaponModel)attachWeaponToHand();
   window.__warPlayerModelSource=source;
- window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:militaryModel?(()=>{let n=0;militaryModel.traverse(o=>{if(o.isBone)n++});return n})():0,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),weaponAnchor,weaponModelVisible:!!weaponModel?.visible,weaponWorld:(()=>{if(!weaponModel)return null;const v=new THREE.Vector3();weaponModel.getWorldPosition(v);return v.toArray()})(),rightHandWorld:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldPosition(v);return v.toArray()})(),rightHandWorldScale:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldScale(v);return v.toArray()})(),weaponWorldBounds:(()=>{if(!weaponModel)return null;const b=new THREE.Box3().setFromObject(weaponModel);return {min:b.min.toArray(),max:b.max.toArray()}})(),ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
+ window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||source,visible:!!militaryModel?.visible,playerVisible:!!militaryModel?.visible,playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;})(),hasRigBones:militaryModel?(()=>{let n=0;militaryModel.traverse(o=>{if(o.isBone)n++});return n})():0,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,animationClips:militaryAnimations.map(a=>a.name),currentAnimation:currentPlayerAction,requestedAnimation:requestedPlayerAction,weaponAnchor,weaponModelVisible:!!weaponModel?.visible,weaponWorld:(()=>{if(!weaponModel)return null;const v=new THREE.Vector3();weaponModel.getWorldPosition(v);return v.toArray()})(),rightHandWorld:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldPosition(v);return v.toArray()})(),rightHandWorldScale:(()=>{if(!militaryModel)return null;const h=findRightHand(militaryModel);if(!h)return null;const v=new THREE.Vector3();h.getWorldScale(v);return v.toArray()})(),weaponWorldBounds:(()=>{if(!weaponModel)return null;const b=new THREE.Box3().setFromObject(weaponModel);return {min:b.min.toArray(),max:b.max.toArray()}})(),ridingBike,bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible')});
   console.info('Playable character model loaded:',source);
   showMessage(source==='Meshy Ogo GLB'?'Ogo chargé · personnage humain 3D actif':'Personnage 3D de secours chargé');
  }catch(e){console.error('Player model rejected:',source,e);model.parent?.remove(model);placeholderParts.forEach(p=>p.visible=false);gun.visible=false;showMessage('Modèle Ogo invalide : recharge après correction')}
