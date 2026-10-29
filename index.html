@@ -438,6 +438,7 @@ function loadGalleryAsset(asset){
  });
 }
 async function updateModelGallery(now){
+ if(galleryAssets.length===0)return;
  const px=player.position.x,pz=player.position.z;
  // Show a 2D impostor at distance; swap to the real 3D asset inside 16 units.
  for(const a of galleryAssets){
@@ -747,7 +748,7 @@ function resetTouchControls(){sprinting=false;endStick();lookId=null}
 addEventListener('blur',resetTouchControls);document.addEventListener('visibilitychange',()=>{if(document.hidden)resetTouchControls()});
 window.__warPlayerTestState=()=>({militaryModelLoaded:!!militaryModel,modelSource:window.__warPlayerModelSource||null,playerVisible:!!militaryModel?.visible,modelScale:militaryModel?.scale.toArray()||null,modelHeight:playerMeasuredHeight,playerChildren:player.children.length,placeholderVisible:placeholderParts.some(p=>p.visible),playerVisibleMeshes:(()=>{let n=0;player.traverse(o=>{if(o.isMesh&&o.visible)n++});return n})(),bikeButtonVisible:mountButton.classList.contains('visible'),pickupButtonVisible:pickupButton.classList.contains('visible'),ridingBike});
 window.__warInteractionTest={moveNearBike:()=>{player.position.set(motorcycle.position.x,0,motorcycle.position.z);updateContextActions()},moveNearWeapon:()=>{player.position.set(weaponPickup.position.x,0,weaponPickup.position.z);updateContextActions()},moveNearDoor:()=>{player.position.set(-10,0,-12.8);updateContextActions()},collisionAt:(x,z)=>isBlocked(x,z),nearestDoorOpen:()=>closestDoor()?.open??null};
-window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:0,cityBuildings:cityBuildings.length,cityWindows:cityWindowMatrices.length,interactiveDoors:doorInteractables.length});
+window.__warWorldAssetTestState=()=>({abandonedBuildingModelReady,generatedRoadModelReady,bikeModelReady,roadSegments:roadSegments.length,abandonedBuildings:abandonedBuildings.length,trees:streamedModels.filter(item=>/tree/i.test(item.label)).length,cityBuildings:cityBuildings.length,cityWindows:cityWindowMatrices.length,interactiveDoors:doorInteractables.length});
 const clock=new THREE.Clock();
 // Cache collision geometry once instead of allocating nine objects every frame.
 const collisionBlocks=[];
