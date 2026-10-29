@@ -186,6 +186,8 @@ function acceptPlayerModel(model,animations=[],source='unknown'){
   const height=isOgoGLB?1.8:Math.max(size.y,.001);
   const scale=isOgoGLB?(1.85/1.8):(1.85/height);
   model.scale.setScalar(scale);
+  // The Meshy Ogo model faces +Z, while the third-person controller moves forward toward -Z at yaw=0. Rotate only the visual rig so forward input makes the soldier face away from the camera.
+  if(isOgoGLB)model.rotation.y=Math.PI;
   if(isOgoGLB)model.position.set(0,0,0);
   else model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
   model.updateMatrixWorld(true);playerMeasuredHeight=height*scale;
